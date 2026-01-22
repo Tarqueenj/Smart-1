@@ -1,0 +1,699 @@
+{% extends "base.html" %}
+
+{% block title %}Clinician Dashboard - SmartTriage AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Clinician Dashboard</h1>
+                    <p class="text-gray-600 mt-1">AI-powered clinical summaries and decision support</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Dr. Sarah Johnson</div>
+                        <div class="text-sm font-medium text-gray-900">Emergency Medicine</div>
+                    </div>
+                    <div class="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        SJ
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-blue-100">Patients to Review</p>
+                        <p class="text-3xl font-bold" id="pending-review">0</p>
+                    </div>
+                    <i class="fas fa-clipboard-list text-4xl text-blue-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-lg shadow p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-red-100">Critical Cases</p>
+                        <p class="text-3xl font-bold" id="critical-cases">0</p>
+                    </div>
+                    <i class="fas fa-exclamation-triangle text-4xl text-red-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-green-100">Completed Today</p>
+                        <p class="text-3xl font-bold" id="completed-today">0</p>
+                    </div>
+                    <i class="fas fa-check-circle text-4xl text-green-200"></i>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg shadow p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-purple-100">Avg. Review Time</p>
+                        <p class="text-3xl font-bold">4.2m</p>
+                    </div>
+                    <i class="fas fa-clock text-4xl text-purple-200"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Patient List -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Patient Queue</h2>
+                    </div>
+                    <div class="overflow-y-auto max-h-96">
+                        <div id="patient-list" class="divide-y divide-gray-200">
+                            <!-- Patients will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clinical Summary -->
+            <div class="lg:col-span-2">
+                <div id="clinical-summary" class="bg-white rounded-lg shadow">
+                    <div class="px-6 py-4 border-b border-gray-200">
+                        <h2 class="text-lg font-semibold text-gray-900">Select a Patient to Review</h2>
+                    </div>
+                    <div class="p-6 text-center text-gray-500">
+                        <i class="fas fa-user-md text-6xl mb-4"></i>
+                        <p>Choose a patient from the queue to view their clinical summary</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Decision Support Panel -->
+        <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- AI Recommendations -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-brain text-purple-600 mr-2"></i>
+                        AI Decision Support
+                    </h3>
+                </div>
+                <div id="ai-recommendations" class="p-6">
+                    <div class="text-center text-gray-500">
+                        <i class="fas fa-robot text-4xl mb-3"></i>
+                        <p>AI recommendations will appear when you select a patient</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">
+                        <i class="fas fa-tools text-blue-600 mr-2"></i>
+                        Quick Actions
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="orderLabs()" class="p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition text-center">
+                            <i class="fas fa-vial text-blue-600 text-2xl mb-2"></i>
+                            <p class="text-sm font-medium text-gray-900">Order Labs</p>
+                        </button>
+                        <button onclick="requestImaging()" class="p-4 bg-green-50 rounded-lg hover:bg-green-100 transition text-center">
+                            <i class="fas fa-x-ray text-green-600 text-2xl mb-2"></i>
+                            <p class="text-sm font-medium text-gray-900">Request Imaging</p>
+                        </button>
+                        <button onclick="prescribeMedication()" class="p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition text-center">
+                            <i class="fas fa-pills text-purple-600 text-2xl mb-2"></i>
+                            <p class="text-sm font-medium text-gray-900">Prescribe</p>
+                        </button>
+                        <button onclick="makeReferral()" class="p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition text-center">
+                            <i class="fas fa-user-md text-orange-600 text-2xl mb-2"></i>
+                            <p class="text-sm font-medium text-gray-900">Refer</p>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Cases -->
+        <div class="mt-6 bg-white rounded-lg shadow">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">Recently Reviewed Cases</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Patient</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Primary Diagnosis</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Treatment</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Review Time</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-cases" class="bg-white divide-y divide-gray-200">
+                        <!-- Recent cases will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Modals -->
+    <div id="action-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-1/2 shadow-lg rounded-lg bg-white">
+            <div class="flex items-center justify-between mb-4">
+                <h3 id="modal-title" class="text-lg font-semibold text-gray-900">Action</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-content">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let patients = [];
+let selectedPatient = null;
+
+// Load patients
+async function loadPatients() {
+    try {
+        const response = await fetch('/api/get_patients');
+        patients = await response.json();
+        
+        updateStats();
+        renderPatientList();
+        renderRecentCases();
+    } catch (error) {
+        console.error('Failed to load patients:', error);
+        showNotification('Failed to load patient data', 'error');
+    }
+}
+
+// Update statistics
+function updateStats() {
+    const pending = patients.filter(p => p.status === 'waiting' || p.status === 'in-progress').length;
+    const critical = patients.filter(p => p.severity === 'RED').length;
+    const completed = patients.filter(p => p.status === 'completed').length;
+    
+    document.getElementById('pending-review').textContent = pending;
+    document.getElementById('critical-cases').textContent = critical;
+    document.getElementById('completed-today').textContent = completed;
+}
+
+// Render patient list
+function renderPatientList() {
+    const listContainer = document.getElementById('patient-list');
+    
+    if (patients.length === 0) {
+        listContainer.innerHTML = '<div class="p-6 text-center text-gray-500">No patients in queue</div>';
+        return;
+    }
+    
+    // Sort by severity and time
+    const sortedPatients = [...patients].sort((a, b) => {
+        const severityOrder = { 'RED': 0, 'YELLOW': 1, 'GREEN': 2 };
+        if (severityOrder[a.severity] !== severityOrder[b.severity]) {
+            return severityOrder[a.severity] - severityOrder[b.severity];
+        }
+        return new Date(a.timestamp) - new Date(b.timestamp);
+    });
+    
+    listContainer.innerHTML = sortedPatients.map(patient => {
+        const severityClass = patient.severity === 'RED' ? 'bg-red-100 text-red-800 border-red-200' : 
+                             patient.severity === 'YELLOW' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 
+                             'bg-green-100 text-green-800 border-green-200';
+        
+        const waitTime = Math.round(patient.wait_time || 0);
+        
+        return `
+            <div onclick="selectPatient('${patient.patient_id}')" class="p-4 hover:bg-gray-50 cursor-pointer transition border-l-4 ${severityClass}">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-semibold text-gray-900">${patient.name}</h4>
+                        <p class="text-sm text-gray-600">Age: ${patient.age} • ${waitTime} min wait</p>
+                        <p class="text-xs text-gray-500 mt-1 truncate">${patient.symptoms}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${severityClass}">
+                            ${patient.severity}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Select patient for review
+function selectPatient(patientId) {
+    selectedPatient = patients.find(p => p.patient_id === patientId);
+    if (!selectedPatient) return;
+    
+    renderClinicalSummary();
+    renderAIRecommendations();
+}
+
+// Render clinical summary
+function renderClinicalSummary() {
+    const summaryContainer = document.getElementById('clinical-summary');
+    
+    const riskFlags = getRiskFlags(selectedPatient);
+    const possibleConditions = getPossibleConditions(selectedPatient);
+    
+    summaryContainer.innerHTML = `
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">Clinical Summary</h2>
+                <div class="flex items-center space-x-2">
+                    <span class="px-3 py-1 text-xs font-semibold rounded-full text-white ${selectedPatient.severity === 'RED' ? 'severity-red' : selectedPatient.severity === 'YELLOW' ? 'severity-yellow' : 'severity-green'}">
+                        ${selectedPatient.severity}
+                    </span>
+                    <button onclick="exportSummary()" class="text-blue-600 hover:text-blue-800">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="p-6 space-y-6">
+            <!-- Patient Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-3">Patient Information</h3>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Name:</span>
+                            <span class="text-sm font-medium">${selectedPatient.name}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Age:</span>
+                            <span class="text-sm font-medium">${selectedPatient.age} years</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Patient ID:</span>
+                            <span class="text-sm font-medium">${selectedPatient.patient_id.substring(0, 8).toUpperCase()}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-sm text-gray-600">Arrival Time:</span>
+                            <span class="text-sm font-medium">${new Date(selectedPatient.timestamp).toLocaleString()}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-900 mb-3">Triage Assessment</h3>
+                    <div class="space-y-2">
+                        <div>
+                            <span class="text-sm text-gray-600">AI Severity Score:</span>
+                            <span class="ml-2 px-2 py-1 text-xs font-semibold rounded-full text-white ${selectedPatient.severity === 'RED' ? 'severity-red' : selectedPatient.severity === 'YELLOW' ? 'severity-yellow' : 'severity-green'}">
+                                ${selectedPatient.severity}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-sm text-gray-600">AI Reasoning:</span>
+                            <p class="text-sm text-gray-900 mt-1">${selectedPatient.triage_reason}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chief Complaint -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-3">Chief Complaint</h3>
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <p class="text-gray-900">${selectedPatient.symptoms}</p>
+                </div>
+            </div>
+            
+            <!-- Risk Assessment -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-3">Risk Assessment</h3>
+                <div class="flex flex-wrap gap-2">
+                    ${riskFlags.map(flag => `
+                        <span class="px-3 py-1 text-sm rounded-full ${flag.class}">
+                            <i class="fas ${flag.icon} mr-1"></i>
+                            ${flag.text}
+                        </span>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Possible Conditions -->
+            <div>
+                <h3 class="font-semibold text-gray-900 mb-3">AI-Suggested Differential Diagnosis</h3>
+                <div class="space-y-2">
+                    ${possibleConditions.map(condition => `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <span class="font-medium text-gray-900">${condition.name}</span>
+                                <span class="ml-2 text-sm text-gray-600">(Probability: ${condition.probability}%)</span>
+                            </div>
+                            <span class="px-2 py-1 text-xs rounded-full ${condition.severity === 'high' ? 'bg-red-100 text-red-800' : condition.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}">
+                                ${condition.severity}
+                            </span>
+                        </div>
+                    `).join('')}
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    This is AI-generated and should be used as a decision support tool only
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+// Render AI recommendations
+function renderAIRecommendations() {
+    const recommendationsContainer = document.getElementById('ai-recommendations');
+    const recommendations = getAIRecommendations(selectedPatient);
+    
+    recommendationsContainer.innerHTML = `
+        <div class="space-y-4">
+            ${recommendations.map(rec => `
+                <div class="border-l-4 ${rec.type === 'critical' ? 'border-red-500 bg-red-50' : rec.type === 'warning' ? 'border-yellow-500 bg-yellow-50' : 'border-blue-500 bg-blue-50'} p-4 rounded">
+                    <div class="flex items-start">
+                        <i class="fas ${rec.icon} ${rec.type === 'critical' ? 'text-red-600' : rec.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'} mt-1 mr-3"></i>
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-gray-900">${rec.title}</h4>
+                            <p class="text-sm text-gray-700 mt-1">${rec.description}</p>
+                            ${rec.action ? `<button onclick="${rec.action}" class="mt-2 text-sm ${rec.type === 'critical' ? 'text-red-600' : rec.type === 'warning' ? 'text-yellow-600' : 'text-blue-600'} hover:underline">${rec.actionText}</button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Get risk flags
+function getRiskFlags(patient) {
+    const flags = [];
+    const symptoms = patient.symptoms.toLowerCase();
+    
+    if (symptoms.includes('pregnancy') && patient.pregnancy_status) {
+        flags.push({ text: 'Pregnancy', class: 'bg-purple-100 text-purple-800', icon: 'fa-baby' });
+    }
+    
+    if (symptoms.includes('fever') && (symptoms.includes('fast breathing') || symptoms.includes('confusion'))) {
+        flags.push({ text: 'Sepsis Risk', class: 'bg-red-100 text-red-800', icon: 'fa-exclamation-triangle' });
+    }
+    
+    if (symptoms.includes('bleeding')) {
+        flags.push({ text: 'Bleeding Risk', class: 'bg-red-100 text-red-800', icon: 'fa-tint' });
+    }
+    
+    if (symptoms.includes('chest pain')) {
+        flags.push({ text: 'Cardiac Risk', class: 'bg-red-100 text-red-800', icon: 'fa-heart' });
+    }
+    
+    if (symptoms.includes('difficulty breathing')) {
+        flags.push({ text: 'Respiratory Distress', class: 'bg-orange-100 text-orange-800', icon: 'fa-lungs' });
+    }
+    
+    if (patient.age < 12) {
+        flags.push({ text: 'Pediatric', class: 'bg-blue-100 text-blue-800', icon: 'fa-child' });
+    }
+    
+    if (patient.age > 65) {
+        flags.push({ text: 'Elderly', class: 'bg-gray-100 text-gray-800', icon: 'fa-user' });
+    }
+    
+    return flags;
+}
+
+// Get possible conditions
+function getPossibleConditions(patient) {
+    const symptoms = patient.symptoms.toLowerCase();
+    const conditions = [];
+    
+    if (symptoms.includes('chest pain')) {
+        conditions.push({ name: 'Acute Coronary Syndrome', probability: 75, severity: 'high' });
+        conditions.push({ name: 'Pulmonary Embolism', probability: 25, severity: 'high' });
+    }
+    
+    if (symptoms.includes('fever') && symptoms.includes('fast breathing')) {
+        conditions.push({ name: 'Sepsis', probability: 80, severity: 'high' });
+        conditions.push({ name: 'Pneumonia', probability: 60, severity: 'medium' });
+    }
+    
+    if (symptoms.includes('abdominal pain')) {
+        conditions.push({ name: 'Acute Appendicitis', probability: 40, severity: 'medium' });
+        conditions.push({ name: 'Pancreatitis', probability: 30, severity: 'medium' });
+    }
+    
+    if (symptoms.includes('headache')) {
+        conditions.push({ name: 'Migraine', probability: 60, severity: 'low' });
+        conditions.push({ name: 'Intracranial Hemorrhage', probability: 15, severity: 'high' });
+    }
+    
+    // Always add at least one condition
+    if (conditions.length === 0) {
+        conditions.push({ name: 'Undifferentiated Complaint', probability: 50, severity: 'medium' });
+    }
+    
+    return conditions.slice(0, 3); // Return top 3
+}
+
+// Get AI recommendations
+function getAIRecommendations(patient) {
+    const recommendations = [];
+    const symptoms = patient.symptoms.toLowerCase();
+    
+    if (patient.severity === 'RED') {
+        recommendations.push({
+            type: 'critical',
+            icon: 'fa-exclamation-triangle',
+            title: 'Immediate Action Required',
+            description: 'Patient requires immediate medical evaluation and intervention.',
+            action: 'orderLabs()',
+            actionText: 'Order Stat Labs'
+        });
+    }
+    
+    if (symptoms.includes('chest pain')) {
+        recommendations.push({
+            type: 'critical',
+            icon: 'fa-heartbeat',
+            title: 'Cardiac Workup Recommended',
+            description: 'Consider ECG, cardiac enzymes, and chest X-ray.',
+            action: 'requestImaging()',
+            actionText: 'Order ECG & X-ray'
+        });
+    }
+    
+    if (symptoms.includes('fever')) {
+        recommendations.push({
+            type: 'warning',
+            icon: 'fa-thermometer',
+            title: 'Infectious Workup',
+            description: 'Consider CBC, blood cultures, and inflammatory markers.',
+            action: 'orderLabs()',
+            actionText: 'Order Labs'
+        });
+    }
+    
+    if (patient.age > 65) {
+        recommendations.push({
+            type: 'warning',
+            icon: 'fa-user-clock',
+            title: 'Elderly Patient Considerations',
+            description: 'Monitor for delirium, polypharmacy, and comorbidities.'
+        });
+    }
+    
+    recommendations.push({
+        type: 'info',
+        icon: 'fa-info-circle',
+        title: 'Documentation Reminder',
+        description: 'Ensure thorough documentation of assessment and plan.'
+    });
+    
+    return recommendations;
+}
+
+// Render recent cases
+function renderRecentCases() {
+    const recentCases = [
+        {
+            name: 'John Doe',
+            diagnosis: 'Acute Appendicitis',
+            treatment: 'Surgical Consultation',
+            reviewTime: '8:30 AM',
+            status: 'Discharged'
+        },
+        {
+            name: 'Mary Smith',
+            diagnosis: 'Community Acquired Pneumonia',
+            treatment: 'Antibiotics',
+            reviewTime: '9:15 AM',
+            status: 'Admitted'
+        },
+        {
+            name: 'James Wilson',
+            diagnosis: 'Migraine',
+            treatment: 'Pain Management',
+            reviewTime: '10:00 AM',
+            status: 'Discharged'
+        }
+    ];
+    
+    const tbody = document.getElementById('recent-cases');
+    tbody.innerHTML = recentCases.map(case_ => `
+        <tr>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${case_.name}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${case_.diagnosis}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${case_.treatment}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${case_.reviewTime}</td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 py-1 text-xs rounded-full ${case_.status === 'Discharged' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                    ${case_.status}
+                </span>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Action functions
+function orderLabs() {
+    if (!selectedPatient) {
+        showNotification('Please select a patient first', 'warning');
+        return;
+    }
+    
+    const modal = document.getElementById('action-modal');
+    const title = document.getElementById('modal-title');
+    const content = document.getElementById('modal-content');
+    
+    title.textContent = 'Order Laboratory Tests';
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Tests:</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2" checked> CBC with Differential
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2" checked> Comprehensive Metabolic Panel
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> Cardiac Enzymes (Troponin)
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> Blood Cultures
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> Coagulation Studies
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Priority:</label>
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <option>Stat</option>
+                    <option>Routine</option>
+                </select>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="confirmOrder('labs')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Order Labs</button>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+function requestImaging() {
+    if (!selectedPatient) {
+        showNotification('Please select a patient first', 'warning');
+        return;
+    }
+    
+    const modal = document.getElementById('action-modal');
+    const title = document.getElementById('modal-title');
+    const content = document.getElementById('modal-content');
+    
+    title.textContent = 'Request Imaging Studies';
+    content.innerHTML = `
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Imaging:</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> Chest X-ray
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> CT Scan (Head)
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> CT Scan (Abdomen/Pelvis)
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> Ultrasound
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2"> ECG
+                    </label>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Clinical Indication:</label>
+                <textarea class="w-full px-3 py-2 border border-gray-300 rounded-lg" rows="3" placeholder="Enter clinical indication..."></textarea>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+                <button onclick="confirmOrder('imaging')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Request Imaging</button>
+            </div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden');
+}
+
+function prescribeMedication() {
+    showNotification('Prescription module coming soon', 'info');
+}
+
+function makeReferral() {
+    showNotification('Referral module coming soon', 'info');
+}
+
+function confirmOrder(type) {
+    closeModal();
+    showNotification(`${type === 'labs' ? 'Lab tests' : 'Imaging studies'} ordered successfully`, 'success');
+}
+
+function exportSummary() {
+    showNotification('Clinical summary exported', 'success');
+}
+
+function closeModal() {
+    document.getElementById('action-modal').classList.add('hidden');
+}
+
+// Auto-refresh every 60 seconds
+setInterval(loadPatients, 60000);
+
+// Initial load
+window.addEventListener('load', loadPatients);
+</script>
+{% endblock %}

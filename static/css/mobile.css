@@ -1,0 +1,455 @@
+/* Mobile-specific styles for SmartTriage AI */
+
+/* Base mobile adjustments */
+@media (max-width: 768px) {
+    /* Navigation adjustments */
+    .nav-desktop {
+        display: none !important;
+    }
+    
+    .nav-mobile {
+        display: block !important;
+    }
+    
+    /* Container adjustments */
+    .max-w-7xl {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    /* Grid adjustments */
+    .grid-cols-1.md\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-cols-1.md\:grid-cols-3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-cols-1.md\:grid-cols-4 {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-cols-1.lg\:grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+    
+    .grid-cols-1.lg\:grid-cols-3 {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Card adjustments */
+    .rounded-2xl {
+        border-radius: 1rem;
+    }
+    
+    /* Text adjustments */
+    .text-4xl {
+        font-size: 2rem;
+    }
+    
+    .text-3xl {
+        font-size: 1.5rem;
+    }
+    
+    .text-2xl {
+        font-size: 1.25rem;
+    }
+    
+    /* Button adjustments */
+    .px-8 {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+    
+    .py-4 {
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    
+    /* Table adjustments */
+    .overflow-x-auto {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Modal adjustments */
+    .w-11\/12.md\:w-3\/4.lg\:w-1\/2 {
+        width: 95%;
+        margin: 1rem auto;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    /* Hero section */
+    .hero-title {
+        font-size: 1.75rem;
+        line-height: 1.2;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+    
+    /* Patient form */
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Stats cards */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .stats-card {
+        padding: 1rem;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+    }
+    
+    /* Patient queue */
+    .patient-row {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .patient-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .patient-actions button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Clinical summary */
+    .clinical-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Charts */
+    .chart-container {
+        height: 250px;
+    }
+    
+    /* Admin dashboard */
+    .admin-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .department-list {
+        font-size: 0.875rem;
+    }
+    
+    /* Quick action buttons */
+    .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .quick-action-btn {
+        padding: 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .quick-action-btn i {
+        font-size: 1.25rem;
+    }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+    /* Increase touch targets */
+    .btn-touch {
+        min-height: 44px;
+        min-width: 44px;
+    }
+    
+    /* Remove hover effects */
+    .hover\:scale-105:hover {
+        transform: none;
+    }
+    
+    .hover\:bg-gray-50:hover {
+        background-color: transparent;
+    }
+    
+    /* Add active states */
+    .btn-touch:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+}
+
+/* Landscape mobile */
+@media (max-width: 768px) and (orientation: landscape) {
+    /* Reduce vertical spacing */
+    .py-24 {
+        padding-top: 3rem;
+        padding-bottom: 3rem;
+    }
+    
+    .py-20 {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+    }
+    
+    /* Compact stats */
+    .stats-card {
+        padding: 0.75rem;
+    }
+    
+    .stats-number {
+        font-size: 1.25rem;
+    }
+    
+    /* Compact patient queue */
+    .patient-row {
+        padding: 0.5rem;
+    }
+    
+    /* Compact forms */
+    .form-container {
+        padding: 1.5rem;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 1024px) {
+    /* Adjust grid layouts */
+    .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .grid-cols-1.md\:grid-cols-2.lg\:grid-cols-4 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    /* Adjust padding */
+    .max-w-7xl {
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }
+    
+    /* Adjust charts */
+    .chart-container {
+        height: 300px;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    /* Improve icon rendering */
+    .fa {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    
+    /* Improve border rendering */
+    .border {
+        border-width: 0.5px;
+    }
+}
+
+/* Dark mode support for mobile */
+@media (prefers-color-scheme: dark) {
+    .bg-gray-50 {
+        background-color: #1f2937;
+    }
+    
+    .bg-white {
+        background-color: #374151;
+    }
+    
+    .text-gray-900 {
+        color: #f9fafb;
+    }
+    
+    .text-gray-600 {
+        color: #d1d5db;
+    }
+    
+    .border-gray-200 {
+        border-color: #4b5563;
+    }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    /* Disable animations */
+    .animate-fade-in,
+    .hover-scale,
+    .alert-pulse,
+    .loading-spinner {
+        animation: none;
+        transition: none;
+    }
+    
+    /* Keep essential transitions */
+    .transition-colors {
+        transition: color 0.1s ease, background-color 0.1s ease;
+    }
+}
+
+/* Print styles for mobile */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    .bg-gradient-to-br {
+        background: none !important;
+    }
+    
+    .shadow-lg {
+        box-shadow: none !important;
+    }
+    
+    .text-blue-600,
+    .text-red-600,
+    .text-green-600,
+    .text-yellow-600 {
+        color: #000 !important;
+    }
+}
+
+/* Mobile menu styles */
+.mobile-menu {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    width: 80%;
+    max-width: 300px;
+    height: 100vh;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: left 0.3s ease;
+    z-index: 1000;
+}
+
+.mobile-menu.active {
+    left: 0;
+}
+
+.mobile-menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+    display: none;
+}
+
+.mobile-menu-overlay.active {
+    display: block;
+}
+
+/* Mobile-specific patient form */
+.mobile-symptom-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+    line-height: 1.5;
+}
+
+.mobile-voice-btn {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+}
+
+/* Mobile patient queue */
+.mobile-patient-card {
+    border-left: 4px solid;
+    margin-bottom: 0.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mobile-patient-card.emergency {
+    border-left-color: #ef4444;
+}
+
+.mobile-patient-card.urgent {
+    border-left-color: #eab308;
+}
+
+.mobile-patient-card.non-urgent {
+    border-left-color: #22c55e;
+}
+
+/* Mobile clinician interface */
+.mobile-clinician-summary {
+    padding: 1rem;
+    background: white;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.mobile-clinician-section {
+    margin-bottom: 1.5rem;
+}
+
+.mobile-clinician-section h3 {
+    font-size: 1.125rem;
+    margin-bottom: 0.75rem;
+    color: #1f2937;
+}
+
+/* Mobile admin dashboard */
+.mobile-admin-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.mobile-admin-stat-card {
+    background: white;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mobile-admin-stat-number {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #1f2937;
+}
+
+.mobile-admin-stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+}
+
+/* Responsive typography */
+@media (max-width: 640px) {
+    h1 { font-size: 1.75rem; }
+    h2 { font-size: 1.5rem; }
+    h3 { font-size: 1.25rem; }
+    h4 { font-size: 1.125rem; }
+}
+
+/* Performance optimizations for mobile */
+.mobile-optimized {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
+}

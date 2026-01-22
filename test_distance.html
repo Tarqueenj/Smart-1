@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Distance Test</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAPJ762xmlsWpmF5N4U3oBasin1X2Gkj84"></script>
+</head>
+<body>
+    <h1>Distance Test</h1>
+    <p>Testing Google Distance Matrix API for accurate driving distances...</p>
+    
+    <script>
+        // Test MTRH coordinates
+        const mtrh = {lat: 0.5175, lng: 35.2693};
+        
+        // Test your current location (approximate)
+        const current = {lat: 0.5143, lng: 35.2698};
+        
+        // Test Distance Matrix API
+        const service = new google.maps.DistanceMatrixService();
+        
+        service.getDistanceMatrix({
+            origins: [new google.maps.LatLng(current.lat, current.lng)],
+            destinations: [new google.maps.LatLng(mtrh.lat, mtrh.lng)],
+            travelMode: 'DRIVING'
+        }, (response, status) => {
+            if (status === 'OK') {
+                const result = response.rows[0].elements[0];
+                console.log('Distance Matrix Result:', result);
+                
+                document.body.innerHTML += `
+                    <h2>Google Distance Matrix Results:</h2>
+                    <p><strong>Distance:</strong> ${result.distance.text} (${result.distance.value / 1000} km)</p>
+                    <p><strong>Duration:</strong> ${result.duration.text} (${result.duration.value / 60} minutes)</p>
+                    <p><strong>Status:</strong> ${result.status}</p>
+                `;
+                
+                // Compare with Haversine
+                const haversineDistance = calculateDistance(current.lat, current.lng, mtrh.lat, mtrh.lng);
+                document.body.innerHTML += `
+                    <h2>Haversine (Straight-line) Distance:</h2>
+                    <p><strong>Distance:</strong> ${haversineDistance.toFixed(3)} km</p>
+                    <p><strong>Difference:</strong> ${Math.abs((result.distance.value / 1000) - haversineDistance).toFixed(3)} km</p>
+                `;
+            } else {
+                document.body.innerHTML += `<p>Error: ${status}</p>`;
+            }
+        });
+        
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+    </script>
+</body>
+</html>

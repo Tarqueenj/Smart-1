@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - SmartTriage AI{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">Hospital Administration Dashboard</h1>
+                    <p class="text-gray-600 mt-1">Analytics, resource optimization, and operational insights</p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Administrator</div>
+                        <div class="text-sm font-medium text-gray-900">MTRH Eldoret</div>
+                    </div>
+                    <div class="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        AD
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 py-6">
+        <!-- Key Performance Indicators -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Daily Patients</p>
+                        <p class="text-3xl font-bold text-gray-900" id="daily-patients">0</p>
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-arrow-up mr-1"></i>12% from yesterday
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-users text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Avg Wait Time</p>
+                        <p class="text-3xl font-bold text-gray-900" id="avg-wait-time">0m</p>
+                        <p class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-arrow-down mr-1"></i>8% improvement
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Bed Occupancy</p>
+                        <p class="text-3xl font-bold text-gray-900" id="bed-occupancy">0%</p>
+                        <p class="text-xs text-yellow-600 mt-1">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>Near capacity
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-bed text-yellow-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Doctor:Patient Ratio</p>
+                        <p class="text-3xl font-bold text-gray-900" id="doctor-ratio">0:1</p>
+                        <p class="text-xs text-red-600 mt-1">
+                            <i class="fas fa-arrow-down mr-1"></i>Below optimal
+                        </p>
+                    </div>
+                    <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user-md text-red-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- Patient Flow Chart -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Patient Flow Analysis</h3>
+                    <select onchange="updatePatientFlowChart(this.value)" class="px-3 py-1 border border-gray-300 rounded text-sm">
+                        <option value="today">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                    </select>
+                </div>
+                <canvas id="patientFlowChart" width="400" height="200"></canvas>
+            </div>
+
+            <!-- Severity Distribution -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Triage Severity Distribution</h3>
+                    <span class="text-sm text-gray-500">Last 24 hours</span>
+                </div>
+                <canvas id="severityChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Resource Management -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+            <!-- Department Status -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Department Status</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                            <span class="text-sm font-medium">Emergency</span>
+                        </div>
+                        <span class="text-sm text-gray-600">85% capacity</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                            <span class="text-sm font-medium">Outpatient</span>
+                        </div>
+                        <span class="text-sm text-gray-600">92% capacity</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                            <span class="text-sm font-medium">Pediatrics</span>
+                        </div>
+                        <span class="text-sm text-gray-600">67% capacity</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                            <span class="text-sm font-medium">Maternity</span>
+                        </div>
+                        <span class="text-sm text-gray-600">98% capacity</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                            <span class="text-sm font-medium">Surgery</span>
+                        </div>
+                        <span class="text-sm text-gray-600">71% capacity</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staff Allocation -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Staff Allocation</h3>
+                </div>
+                <div class="p-6">
+                    <canvas id="staffChart" width="300" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- Peak Hours Analysis -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Peak Hours Analysis</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">8:00 - 10:00</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                                <span class="text-sm font-medium">75%</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">10:00 - 12:00</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 90%"></div>
+                                </div>
+                                <span class="text-sm font-medium">90%</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">12:00 - 14:00</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-red-600 h-2 rounded-full" style="width: 95%"></div>
+                                </div>
+                                <span class="text-sm font-medium">95%</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">14:00 - 16:00</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-yellow-600 h-2 rounded-full" style="width: 85%"></div>
+                                </div>
+                                <span class="text-sm font-medium">85%</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">16:00 - 18:00</span>
+                            <div class="flex items-center">
+                                <div class="w-32 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                                <span class="text-sm font-medium">60%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                        <p class="text-sm text-yellow-800">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Consider increasing staff during 12:00-14:00 peak hours
+                        </p>
+               
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Performance Metrics -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900">AI Triage Performance</h3>
+            </div>
+            <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-600">94.2%</div>
+                        <p class="text-sm text-gray-600 mt-1">Accuracy Rate</p>
+                        <div class="text-xs text-green-600 mt-1">
+                            <i class="fas fa-arrow-up mr-1"></i>2.1% this month
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-600">2.3s</div>
+                        <p class="text-sm text-gray-600 mt-1">Avg Processing Time</p>
+                        <div class="text-xs text-gray-500 mt-1">Per assessment</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-purple-600">1,247</div>
+                        <p class="text-sm text-gray-600 mt-1">Total Assessments</p>
+                        <div class="text-xs text-gray-500 mt-1">This month</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-orange-600">98.7%</div>
+                        <p class="text-sm text-gray-600 mt-1">System Uptime</p>
+                        <div class="text-xs text-gray-500 mt-1">Last 30 days</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activities & Alerts -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- System Alerts -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">System Alerts</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <div class="border-l-4 border-red-500 bg-red-50 p-4 rounded">
+                        <div class="flex items-start">
+                            <i class="fas fa-exclamation-triangle text-red-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="text-sm font-semibold text-red-900">Maternity Ward at Capacity</h4>
+                                <p class="text-sm text-red-700 mt-1">98% bed occupancy. Consider diverting non-critical cases.</p>
+                                <p class="text-xs text-red-600 mt-2">2 hours ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded">
+                        <div class="flex items-start">
+                            <i class="fas fa-clock text-yellow-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="text-sm font-semibold text-yellow-900">Increased Wait Times</h4>
+                                <p class="text-sm text-yellow-700 mt-1">Average wait time increased by 15% during peak hours.</p>
+                                <p class="text-xs text-yellow-600 mt-2">4 hours ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="border-l-4 border-blue-500 bg-blue-50 p-4 rounded">
+                        <div class="flex items-start">
+                            <i class="fas fa-info-circle text-blue-600 mt-1 mr-3"></i>
+                            <div>
+                                <h4 class="text-sm font-semibold text-blue-900">System Update Completed</h4>
+                                <p class="text-sm text-blue-700 mt-1">AI model updated to version 2.4.1 with improved accuracy.</p>
+                                <p class="text-xs text-blue-600 mt-2">6 hours ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900">Recent Activities</h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-4">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-900">New staff onboarding completed</p>
+                                <p class="text-xs text-gray-500">5 nurses trained on SmartTriage AI system</p>
+                                <p class="text-xs text-gray-400 mt-1">30 minutes ago</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-900">Weekly report generated</p>
+                                <p class="text-xs text-gray-500">Patient flow analysis for week 42</p>
+                                <p class="text-xs text-gray-400 mt-1">2 hours ago</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-900">Resource optimization implemented</p>
+                                <p class="text-xs text-gray-500">Staff reallocation based on AI recommendations</p>
+                                <p class="text-xs text-gray-400 mt-1">5 hours ago</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start space-x-3">
+                            <div class="w-2 h-2 bg-orange-500 rounded-full mt-2"></div>
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-900">Maintenance scheduled</p>
+                                <p class="text-xs text-gray-500">System maintenance planned for Sunday 2AM-4AM</p>
+                                <p class="text-xs text-gray-400 mt-1">1 day ago</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let patientFlowChart, severityChart, staffChart;
+
+// Load analytics data
+async function loadAnalytics() {
+    try {
+        const response = await fetch('/api/get_analytics');
+        const analytics = await response.json();
+        
+        updateKPIs(analytics);
+        initializeCharts(analytics);
+    } catch (error) {
+        console.error('Failed to load analytics:', error);
+        showNotification('Failed to load analytics data', 'error');
+    }
+}
+
+// Update Key Performance Indicators
+function updateKPIs(analytics) {
+    document.getElementById('daily-patients').textContent = analytics.total_patients;
+    document.getElementById('avg-wait-time').textContent = analytics.average_wait_time + 'm';
+    document.getElementById('bed-occupancy').textContent = analytics.bed_occupancy + '%';
+    document.getElementById('doctor-ratio').textContent = '1:' + analytics.doctor_to_patient_ratio.toFixed(1);
+}
+
+// Initialize charts
+function initializeCharts(analytics) {
+    // Patient Flow Chart
+    const patientFlowCtx = document.getElementById('patientFlowChart').getContext('2d');
+    if (patientFlowChart) patientFlowChart.destroy();
+    
+    patientFlowChart = new Chart(patientFlowCtx, {
+        type: 'line',
+        data: {
+            labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM'],
+            datasets: [{
+                label: 'Patient Arrivals',
+                data: [12, 45, 78, 95, 82, 65, 43, 28],
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4
+            }, {
+                label: 'Patient Discharges',
+                data: [8, 32, 65, 72, 68, 58, 35, 22],
+                borderColor: 'rgb(34, 197, 94)',
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Severity Distribution Chart
+    const severityCtx = document.getElementById('severityChart').getContext('2d');
+    if (severityChart) severityChart.destroy();
+    
+    severityChart = new Chart(severityCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Emergency (Red)', 'Urgent (Yellow)', 'Non-Urgent (Green)'],
+            datasets: [{
+                data: [analytics.red_patients, analytics.yellow_patients, analytics.green_patients],
+                backgroundColor: [
+                    'rgb(239, 68, 68)',
+                    'rgb(234, 179, 8)',
+                    'rgb(34, 197, 94)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Staff Allocation Chart
+    const staffCtx = document.getElementById('staffChart').getContext('2d');
+    if (staffChart) staffChart.destroy();
+    
+    staffChart = new Chart(staffCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Doctors', 'Nurses', 'Technicians', 'Admin'],
+            datasets: [{
+                label: 'Current Staff',
+                data: [12, 45, 18, 8],
+                backgroundColor: 'rgba(59, 130, 246, 0.8)'
+            }, {
+                label: 'Required Staff',
+                data: [15, 52, 20, 8],
+                backgroundColor: 'rgba(239, 68, 68, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// Update patient flow chart based on time period
+function updatePatientFlowChart(period) {
+    // Mock data for different time periods
+    const data = {
+        today: {
+            labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM'],
+            arrivals: [12, 45, 78, 95, 82, 65, 43, 28],
+            discharges: [8, 32, 65, 72, 68, 58, 35, 22]
+        },
+        week: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            arrivals: [320, 345, 380, 365, 390, 280, 220],
+            discharges: [310, 335, 365, 355, 375, 270, 210]
+        },
+        month: {
+            labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+            arrivals: [2100, 2250, 2180, 2320],
+            discharges: [2050, 2200, 2150, 2280]
+        }
+    };
+    
+    const selectedData = data[period];
+    
+    patientFlowChart.data.labels = selectedData.labels;
+    patientFlowChart.data.datasets[0].data = selectedData.arrivals;
+    patientFlowChart.data.datasets[1].data = selectedData.discharges;
+    patientFlowChart.update();
+}
+
+// Export report
+function exportReport() {
+    showNotification('Report exported successfully', 'success');
+}
+
+// Auto-refresh every 5 minutes
+setInterval(loadAnalytics, 300000);
+
+// Initial load
+window.addEventListener('load', loadAnalytics);
+</script>
+{% endblock %}

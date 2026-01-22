@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Distance Matrix</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAPJ762xmlsWpmF5N4U3oBasin1X2Gkj84"></script>
+</head>
+<body>
+    <h1>Distance Matrix Debug</h1>
+    <p>Testing exact MTRH coordinates and nearby search...</p>
+    
+    <script>
+        // Test exact MTRH coordinates from database
+        const mtrh = {lat: 0.5175, lng: 35.2693};
+        
+        // Test your current location (slightly different to avoid zero distance)
+        const current = {lat: 0.5170, lng: 35.2690}; // 50m away from MTRH
+        
+        console.log('Testing from:', current);
+        console.log('Testing to:', mtrh);
+        
+        // Test Distance Matrix API
+        const service = new google.maps.DistanceMatrixService();
+        
+        service.getDistanceMatrix({
+            origins: [new google.maps.LatLng(current.lat, current.lng)],
+            destinations: [new google.maps.LatLng(mtrh.lat, mtrh.lng)],
+            travelMode: 'DRIVING'
+        }, (response, status) => {
+            console.log('Distance Matrix Status:', status);
+            console.log('Full Response:', response);
+            
+            if (status === 'OK') {
+                const result = response.rows[0].elements[0];
+                document.body.innerHTML += `
+                    <h2>Google Distance Matrix Results:</h2>
+                    <p><strong>From:</strong> ${current.lat}, ${current.lng}</p>
+                    <p><strong>To:</strong> ${mtrh.lat}, ${mtrh.lng}</p>
+                    <p><strong>Distance:</strong> ${result.distance.text} (${result.distance.value} meters = ${(result.distance.value / 1000).toFixed(3)} km)</p>
+                    <p><strong>Duration:</strong> ${result.duration.text} (${result.duration.value} seconds = ${(result.duration.value / 60).toFixed(1)} minutes)</p>
+                    <p><strong>Status:</strong> ${result.status}</p>
+                `;
+            } else {
+                document.body.innerHTML += `<p>Error: ${status}</p>`;
+            }
+            
+            // Also test Places API nearby search
+            console.log('Testing Places API nearby search...');
+            const placesService = new google.maps.places.PlacesService(document.createElement('div'));
+            
+            placesService.nearbySearch({
+                location: new google.maps.LatLng(current.lat, current.lng),
+                radius: 10000,
+                type: 'hospital'
+            }, (places, placesStatus) => {
+                console.log('Places Status:', placesStatus);
+                console.log('Places Results:', places);
+                
+                if (placesStatus === 'OK') {
+                    document.body.innerHTML += `
+                        <h2>Places API Nearby Results:</h2>
+                        <p><strong>Found ${places.length} hospitals</strong></p>
+                    `;
+                    
+                    places.forEach((place, index) => {
+                        const distance = google.maps.geometry.spherical.computeDistanceBetween(
+                            new google.maps.LatLng(current.lat, current.lng),
+                            place.geometry.location
+                        );
+                        
+                        document.body.innerHTML += `
+                            <div style="border: 1px solid #ccc; padding: 10px; margin: 10px;">
+                                <h3>${place.name}</h3>
+                                <p><strong>Address:</strong> ${place.vicinity}</p>
+                                <p><strong>Straight-line Distance:</strong> ${(distance / 1000).toFixed(3)} km (${Math.round(distance)} meters)</p>
+                                <p><strong>Place ID:</strong> ${place.place_id}</p>
+                            </div>
+                        `;
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}SmartTriage AI - Home{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white">
+    <div class="absolute inset-0 bg-black opacity-10"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div class="text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+                SmartTriage AI
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 text-blue-100 max-w-3xl mx-auto">
+                Revolutionizing emergency care in Eldoret through AI-powered patient triage and prioritization
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/patient" class="bg-white text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transition transform hover:scale-105 shadow-lg">
+                    <i class="fas fa-user-injured mr-2"></i>
+                    Start Triage Assessment
+                </a>
+                <a href="/nurse" class="bg-transparent border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-blue-600 transition transform hover:scale-105">
+                    <i class="fas fa-user-nurse mr-2"></i>
+                    Staff Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                How SmartTriage AI Saves Lives
+            </h2>
+            <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                Our AI-powered system prioritizes patients based on medical urgency, not just arrival time
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="bg-gradient-to-br from-red-50 to-red-100 p-8 rounded-2xl hover-scale">
+                <div class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mb-6">
+                    <i class="fas fa-exclamation-triangle text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Emergency Detection</h3>
+                <p class="text-gray-600 mb-4">
+                    AI identifies critical conditions like sepsis, internal bleeding, and pregnancy complications before they become life-threatening.
+                </p>
+                <div class="flex items-center text-red-600 font-medium">
+                    <i class="fas fa-clock mr-2"></i>
+                    <span>Seconds to triage</span>
+                </div>
+            </div>
+            
+            <!-- Feature 2 -->
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-8 rounded-2xl hover-scale">
+                <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mb-6">
+                    <i class="fas fa-hospital text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Smart Facility Routing</h3>
+                <p class="text-gray-600 mb-4">
+                    Google Maps integration directs patients to the nearest facility with the shortest predicted wait time, reducing overcrowding.
+                </p>
+                <div class="flex items-center text-blue-600 font-medium">
+                    <i class="fas fa-route mr-2"></i>
+                    <span>Optimized patient flow</span>
+                </div>
+            </div>
+            
+            <!-- Feature 3 -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-2xl hover-scale">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mb-6">
+                    <i class="fas fa-chart-line text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-4">Real-time Analytics</h3>
+                <p class="text-gray-600 mb-4">
+                    Hospital administrators get instant insights into patient flow, resource utilization, and peak hours for better planning.
+                </p>
+                <div class="flex items-center text-green-600 font-medium">
+                    <i class="fas fa-analytics mr-2"></i>
+                    <span>Data-driven decisions</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Statistics Section -->
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Impact in Eldoret Hospitals
+            </h2>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="text-center">
+                <div class="text-4xl font-bold text-blue-600 mb-2">52%</div>
+                <div class="text-gray-600">Reduction in Wait Times</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-green-600 mb-2">94%</div>
+                <div class="text-gray-600">Accuracy in Emergency Detection</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-purple-600 mb-2">2,500+</div>
+                <div class="text-gray-600">Patients Triage Monthly</div>
+            </div>
+            <div class="text-center">
+                <div class="text-4xl font-bold text-red-600 mb-2">24/7</div>
+                <div class="text-gray-600">AI-Powered Monitoring</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                How SmartTriage AI Works
+            </h2>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <!-- Step 1 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-2xl font-bold text-blue-600">1</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Patient Reports Symptoms</h3>
+                <p class="text-gray-600 text-sm">
+                    Patients describe symptoms via text or voice on mobile/web interface
+                </p>
+            </div>
+            
+            <!-- Step 2 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-2xl font-bold text-blue-600">2</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">AI Analyzes & Scores</h3>
+                <p class="text-gray-600 text-sm">
+                    OpenAI NLP processes symptoms and assigns severity score (Red/Yellow/Green)
+                </p>
+            </div>
+            
+            <!-- Step 3 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-2xl font-bold text-blue-600">3</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Real-time Synchronization</h3>
+                <p class="text-gray-600 text-sm">
+                    AWS cloud syncs data instantly to nurse and clinician dashboards
+                </p>
+            </div>
+            
+            <!-- Step 4 -->
+            <div class="text-center">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="text-2xl font-bold text-blue-600">4</span>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-3">Prioritized Care</h3>
+                <p class="text-gray-600 text-sm">
+                    Healthcare teams treat patients based on medical urgency, not arrival time
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Partner Hospitals Section -->
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Partner Hospitals in Eldoret
+            </h2>
+            <p class="text-xl text-gray-600">
+                Trusted by leading healthcare facilities in Western Kenya
+            </p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale text-center">
+                <div class="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-hospital-alt text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">MTRH</h3>
+                <p class="text-gray-600">Moi Teaching and Referral Hospital</p>
+            </div>
+            
+            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale text-center">
+                <div class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-clinic-medical text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Eldoret Hospital</h3>
+                <p class="text-gray-600">Regional Referral Center</p>
+            </div>
+            
+            <div class="bg-white p-8 rounded-xl shadow-lg hover-scale text-center">
+                <div class="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-procedures text-white text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-900 mb-2">Uasin Gishu County</h3>
+                <p class="text-gray-600">County General Hospital</p>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
