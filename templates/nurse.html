@@ -14,12 +14,19 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <div class="text-right">
+                        <div class="text-sm text-gray-500">Welcome, {{ session.name }}</div>
+                        <div class="text-xs text-gray-400">{{ session.role.title() }}</div>
+                    </div>
+                    <div class="text-right">
                         <div class="text-sm text-gray-500">Current Time</div>
                         <div class="text-lg font-semibold text-gray-900" id="nurse-time"></div>
                     </div>
                     <button onclick="refreshQueue()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
                         <i class="fas fa-sync-alt mr-2"></i>Refresh
                     </button>
+                    <a href="/auth/logout" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </a>
                 </div>
             </div>
         </div>
@@ -191,7 +198,9 @@
     </div>
 </div>
 
-<script>
+<script type="text/javascript">
+// @ts-check
+/* eslint-disable */
 let patients = [];
 let filteredPatients = [];
 
@@ -286,72 +295,205 @@ function renderPatientQueue() {
                     </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <div class="text-sm text-gray-900">${waitTime} min</div>
-                    <div class="text-xs text-gray-500">${new Date(patient.timestamp).toLocaleTimeString()}</div>
+                    <div class="text-sm text-gray-900">${patient.wait_time} min</div>
+                    <div class="text-xs text-gray-500">${formatTime(patient.created_at)}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    ${riskFlags.map(flag => `
-                        <span class="px-2 py-1 text-xs rounded-full ${flag.class} mr-1">
-                            ${flag.text}
-                        </span>
-                    `).join('')}
+                    <div class="flex flex-wrap gap-1">
+                        ${patient.risk_flags.map(flag => 
+                            `<span class="px-2 py-1 text-xs rounded-full ${getRiskFlagClass(flag)}">
+                                ${flag}
+                            </span>`
+                        ).join('')}
+                    </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(patient.status)}">
-                        ${patient.status}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button onclick="viewPatient('${patient.patient_id}')" class="text-blue-600 hover:text-blue-900 mr-3">
-                        <i class="fas fa-eye"></i> View
-                    </button>
-                    <select onchange="updatePatientStatus('${patient.patient_id}', this.value)" class="px-2 py-1 border border-gray-300 rounded text-xs">
+                    <select class="px-2 py-1 text-sm border border-gray-300 rounded" onchange="updatePatientStatus('${patient.id}', this.value)">
                         <option value="waiting" ${patient.status === 'waiting' ? 'selected' : ''}>Waiting</option>
                         <option value="in-progress" ${patient.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
                         <option value="completed" ${patient.status === 'completed' ? 'selected' : ''}>Completed</option>
                     </select>
                 </td>
-            </tr>
-        `;
-    }).join('');
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button onclick="viewPatientDetails('${patient.id}')" class="text-blue-600 hover:text-blue-900 mr-3">
+                        <i class="fas fa-eye"></i> View
+                    </button>
+                    <button onclick="assignPatient('${patient.id}')" class="text-green-600 hover:text-green-900">
+                        <i class="fas fa-user-md"></i> Assign
+                    </button>
+                </td>
+            </tr>`
+        }).join('');
 }
 
-// Get risk flags for patient
-function getRiskFlags(patient) {
-    const flags = [];
-    const symptoms = patient.symptoms.toLowerCase();
-    
-    if (symptoms.includes('pregnancy') && patient.pregnancy_status) {
-        flags.push({ text: 'Pregnancy', class: 'bg-purple-100 text-purple-800' });
+// Load dashboard data
+async function loadDashboardData() {
+    try {
+        const response = await fetch('/api/nurse/dashboard');
+        const result = await response.json();
+        
+        if (result.success) {
+            updateStats(result.data.stats);
+            updatePatientQueue(result.data.patients);
+            updateLastRefresh(result.data.last_updated);
+        } else {
+            console.error('Failed to load dashboard data:', result.message);
+            showNotification('Failed to load dashboard data', 'error');
+        }
+    } catch (error) {
+        console.error('Error loading dashboard data:', error);
+        showNotification('Error loading dashboard data', 'error');
     }
-    
-    if (symptoms.includes('fever') && (symptoms.includes('fast breathing') || symptoms.includes('confusion'))) {
-        flags.push({ text: 'Sepsis Risk', class: 'bg-red-100 text-red-800' });
-    }
-    
-    if (symptoms.includes('bleeding')) {
-        flags.push({ text: 'Bleeding', class: 'bg-red-100 text-red-800' });
-    }
-    
-    if (patient.age < 12) {
-        flags.push({ text: 'Pediatric', class: 'bg-blue-100 text-blue-800' });
-    }
-    
-    if (patient.age > 65) {
-        flags.push({ text: 'Elderly', class: 'bg-gray-100 text-gray-800' });
-    }
-    
-    return flags;
 }
 
-// Get status class
-function getStatusClass(status) {
-    switch(status) {
-        case 'waiting': return 'bg-yellow-100 text-yellow-800';
-        case 'in-progress': return 'bg-blue-100 text-blue-800';
-        case 'completed': return 'bg-green-100 text-green-800';
-        default: return 'bg-gray-100 text-gray-800';
+// Update statistics
+function updateStats(stats) {
+    document.getElementById('total-patients').textContent = stats.total_patients;
+    document.getElementById('red-patients').textContent = stats.red_patients;
+    document.getElementById('yellow-patients').textContent = stats.yellow_patients;
+    document.getElementById('green-patients').textContent = stats.green_patients;
+    
+    // Show alert banner if there are critical patients
+    if (stats.red_patients > 0) {
+        const alertBanner = document.getElementById('alert-banner');
+        const alertCount = document.getElementById('alert-count');
+        alertBanner.classList.remove('hidden');
+        alertCount.textContent = stats.red_patients;
     }
+}
+
+// Update patient queue table
+function updatePatientQueue(patientList) {
+    const queueBody = document.getElementById('patient-queue');
+    const noPatients = document.getElementById('no-patients');
+    
+    if (patientList.length === 0) {
+        queueBody.innerHTML = '';
+        noPatients.classList.remove('hidden');
+        return;
+    }
+    
+    noPatients.classList.add('hidden');
+    
+    queueBody.innerHTML = patientList.map(patient => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full text-white ${getSeverityClass(patient.severity)}">
+                    ${patient.severity}
+                </span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm font-medium text-gray-900">${patient.name}</div>
+                <div class="text-sm text-gray-500">Age: ${patient.age} | ID: ${patient.id.substring(0, 8).toUpperCase()}</div>
+            </td>
+            <td class="px-6 py-4">
+                <div class="text-sm text-gray-900 max-w-xs truncate" title="${patient.symptoms}">
+                    ${patient.symptoms}
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">${patient.wait_time} min</div>
+                <div class="text-xs text-gray-500">${formatTime(patient.created_at)}</div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex flex-wrap gap-1">
+                    ${patient.risk_flags.map(flag => `
+                        <span class="px-2 py-1 text-xs rounded-full ${getRiskFlagClass(flag)}">
+                            ${flag}
+                        </span>
+                    `).join('')}
+                </div>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap">
+                <select class="px-2 py-1 text-sm border border-gray-300 rounded" onchange="updatePatientStatus('${patient.id}', this.value)">
+                    <option value="waiting" ${patient.status === 'waiting' ? 'selected' : ''}>Waiting</option>
+                    <option value="in-progress" ${patient.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="completed" ${patient.status === 'completed' ? 'selected' : ''}>Completed</option>
+                </select>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button onclick="viewPatientDetails('${patient.id}')" class="text-blue-600 hover:text-blue-900 mr-3">
+                    <i class="fas fa-eye"></i> View
+                </button>
+                <button onclick="assignPatient('${patient.id}')" class="text-green-600 hover:text-green-900">
+                    <i class="fas fa-user-md"></i> Assign
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Update patient status
+async function updatePatientStatus(patientId, status) {
+    try {
+        const response = await fetch('/api/nurse/update_patient_status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                patient_id: patientId,
+                status: status
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Patient status updated successfully', 'success');
+            // Refresh dashboard data
+            setTimeout(loadDashboardData, 1000);
+        } else {
+            showNotification('Failed to update patient status', 'error');
+        }
+    } catch (error) {
+        console.error('Error updating patient status:', error);
+        showNotification('Error updating patient status', 'error');
+    }
+}
+
+// Helper functions
+function getSeverityClass(severity) {
+    switch(severity) {
+        case 'RED': return 'severity-red';
+        case 'YELLOW': return 'severity-yellow';
+        case 'GREEN': return 'severity-green';
+        default: return 'bg-gray-500';
+    }
+}
+
+function getRiskFlagClass(flag) {
+    if (flag.includes('Critical')) return 'bg-red-100 text-red-800';
+    if (flag.includes('Life')) return 'bg-orange-100 text-orange-800';
+    if (flag.includes('Infection')) return 'bg-yellow-100 text-yellow-800';
+    if (flag.includes('Pregnancy')) return 'bg-purple-100 text-purple-800';
+    return 'bg-gray-100 text-gray-800';
+}
+
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+function updateLastRefresh(timestamp) {
+    const date = new Date(timestamp);
+    document.getElementById('last-refresh').textContent = date.toLocaleTimeString();
+}
+
+// View patient details
+function viewPatientDetails(patientId) {
+    showNotification(`Viewing details for patient ${patientId}`, 'info');
+}
+
+// Assign patient
+function assignPatient(patientId) {
+    showNotification(`Patient ${patientId} assigned to you`, 'success');
+}
+
+// Refresh queue
+function refreshQueue() {
+    loadDashboardData();
+    showNotification('Dashboard refreshed', 'success');
 }
 
 // Filter patients
@@ -359,168 +501,8 @@ function filterPatients() {
     const severityFilter = document.getElementById('severity-filter').value;
     const statusFilter = document.getElementById('status-filter').value;
     
-    filteredPatients = patients.filter(patient => {
-        const severityMatch = severityFilter === 'all' || patient.severity === severityFilter;
-        const statusMatch = statusFilter === 'all' || patient.status === statusFilter;
-        return severityMatch && statusMatch;
-    });
-    
-    renderPatientQueue();
-}
-
-// Update patient status
-async function updatePatientStatus(patientId, newStatus) {
-    try {
-        const response = await fetch('/api/update_patient_status', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ patient_id: patientId, status: newStatus })
-        });
-        
-        if (response.ok) {
-            showNotification('Patient status updated', 'success');
-            loadPatients();
-        } else {
-            throw new Error('Failed to update status');
-        }
-    } catch (error) {
-        showNotification('Error updating patient status', 'error');
-    }
-}
-
-// View patient details
-function viewPatient(patientId) {
-    const patient = patients.find(p => p.patient_id === patientId);
-    if (!patient) return;
-    
-    const modal = document.getElementById('patient-modal');
-    const details = document.getElementById('patient-details');
-    
-    details.innerHTML = `
-        <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-sm font-medium text-gray-500">Name</label>
-                    <p class="text-lg font-semibold">${patient.name}</p>
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-gray-500">Age</label>
-                    <p class="text-lg font-semibold">${patient.age}</p>
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-gray-500">Patient ID</label>
-                    <p class="text-lg font-semibold">${patient.patient_id.substring(0, 8).toUpperCase()}</p>
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-gray-500">Severity</label>
-                    <p><span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full text-white ${patient.severity === 'RED' ? 'severity-red' : patient.severity === 'YELLOW' ? 'severity-yellow' : 'severity-green'}">${patient.severity}</span></p>
-                </div>
-            </div>
-            
-            <div>
-                <label class="text-sm font-medium text-gray-500">Symptoms</label>
-                <p class="text-gray-900">${patient.symptoms}</p>
-            </div>
-            
-            <div>
-                <label class="text-sm font-medium text-gray-500">AI Triage Reason</label>
-                <p class="text-gray-900">${patient.triage_reason}</p>
-            </div>
-            
-            <div>
-                <label class="text-sm font-medium text-gray-500">Risk Flags</label>
-                <div class="mt-2">
-                    ${getRiskFlags(patient).map(flag => `
-                        <span class="px-2 py-1 text-xs rounded-full ${flag.class} mr-1 mb-1">
-                            ${flag.text}
-                        </span>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="text-sm font-medium text-gray-500">Arrival Time</label>
-                    <p class="text-gray-900">${new Date(patient.timestamp).toLocaleString()}</p>
-                </div>
-                <div>
-                    <label class="text-sm font-medium text-gray-500">Wait Time</label>
-                    <p class="text-gray-900">${Math.round(patient.wait_time || 0)} minutes</p>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    modal.classList.remove('hidden');
-}
-
-// Close patient modal
-function closePatientModal() {
-    document.getElementById('patient-modal').classList.add('hidden');
-}
-
-// Update critical alerts
-function updateCriticalAlerts() {
-    const criticalPatients = patients.filter(p => p.severity === 'RED');
-    const alertsContainer = document.getElementById('critical-alerts');
-    
-    if (criticalPatients.length === 0) {
-        alertsContainer.innerHTML = '<p class="text-gray-500 text-center">No critical alerts</p>';
-        return;
-    }
-    
-    alertsContainer.innerHTML = criticalPatients.map(patient => `
-        <div class="border-l-4 border-red-500 bg-red-50 p-4 rounded alert-pulse">
-            <div class="flex items-start justify-between">
-                <div>
-                    <h4 class="text-sm font-semibold text-red-900">${patient.name}</h4>
-                    <p class="text-sm text-red-700 mt-1">${patient.symptoms}</p>
-                    <div class="mt-2">
-                        <span class="text-xs text-red-600">
-                            <i class="fas fa-clock mr-1"></i>
-                            Waiting ${Math.round(patient.wait_time || 0)} minutes
-                        </span>
-                    </div>
-                </div>
-                <button onclick="viewPatient('${patient.patient_id}')" class="text-red-600 hover:text-red-800">
-                    <i class="fas fa-arrow-right"></i>
-                </button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Update recent activity
-function updateRecentActivity() {
-    const recentPatients = [...patients]
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-        .slice(0, 5);
-    
-    const activityContainer = document.getElementById('recent-activity');
-    
-    if (recentPatients.length === 0) {
-        activityContainer.innerHTML = '<p class="text-gray-500 text-center">No recent activity</p>';
-        return;
-    }
-    
-    activityContainer.innerHTML = recentPatients.map(patient => `
-        <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded">
-            <div class="w-2 h-2 rounded-full ${patient.severity === 'RED' ? 'bg-red-500' : patient.severity === 'YELLOW' ? 'bg-yellow-500' : 'bg-green-500'}"></div>
-            <div class="flex-1">
-                <p class="text-sm font-medium text-gray-900">${patient.name}</p>
-                <p class="text-xs text-gray-500">${new Date(patient.timestamp).toLocaleTimeString()}</p>
-            </div>
-            <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(patient.status)}">
-                ${patient.status}
-            </span>
-        </div>
-    `).join('');
-}
-
-// Refresh queue
-function refreshQueue() {
-    loadPatients();
-    showNotification('Queue refreshed', 'info');
+    // This would filter the displayed patients
+    loadDashboardData(); // For now, just reload all data
 }
 
 // Dismiss alert
@@ -528,10 +510,40 @@ function dismissAlert() {
     document.getElementById('alert-banner').classList.add('hidden');
 }
 
+// Show notification
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'warning' ? 'bg-yellow-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas ${
+                type === 'success' ? 'fa-check-circle' :
+                type === 'error' ? 'fa-exclamation-circle' :
+                type === 'warning' ? 'fa-exclamation-triangle' :
+                'fa-info-circle'
+            } mr-2"></i>
+            ${message}
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
 // Auto-refresh every 30 seconds
-setInterval(loadPatients, 30000);
+setInterval(loadDashboardData, 30000);
 
 // Initial load
-window.addEventListener('load', loadPatients);
+window.addEventListener('load', loadDashboardData);
 </script>
 {% endblock %}

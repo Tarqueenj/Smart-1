@@ -6,6 +6,7 @@ Integrates with Hugging Face models for sophisticated symptom analysis
 import os
 import json
 import logging
+import requests
 from typing import Dict, List, Tuple, Optional
 from datetime import datetime
 
@@ -28,31 +29,28 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class HuggingFaceAIService:
-    """Hugging Face AI service for medical triage analysis"""
+    """Hugging Face AI service for medical triage analysis using OpenAI models"""
     
-    def __init__(self, model_name: str = "bert-base-uncased"):
+    def __init__(self, model_name: str = "distilgpt2", use_api: bool = True, api_token: str = None):
         """
-        Initialize the Hugging Face AI service
+        Initialize the Hugging Face AI service with OpenAI models
         
         Args:
-            model_name: Name of the Hugging Face model to use
+            model_name: Name of the OpenAI model from Hugging Face (default: distilgpt2 for speed)
+            use_api: Whether to use Hugging Face Inference API (always True)
+            api_token: Hugging Face API token
         """
         self.model_name = model_name
-        self.model = None
-        self.tokenizer = None
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.use_api = use_api
+        self.api_token = api_token or os.getenv('HUGGINGFACE_API_TOKEN')
         
-        logger.info(f"Initializing Hugging Face AI service with model: {model_name}")
+        logger.info(f"Initializing Hugging Face AI service with OpenAI model: {model_name}")
         
-        # Load model and tokenizer
-        try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            self.model.to(self.device)
-            logger.info(f"✅ Successfully loaded Hugging Face model: {model_name}")
-        except Exception as e:
-            logger.error(f"❌ Failed to load Hugging Face model {model_name}: {e}")
-            raise e
+        if not self.api_token:
+            logger.warning("⚠️ No Hugging Face API token provided - service will not work")
+            raise ValueError("Hugging Face API token is required")
+        
+        logger.info("🌐 Using Hugging Face API with OpenAI models - advanced medical analysis")
     
     def analyze_symptoms_with_ai(
         self, 
@@ -62,7 +60,7 @@ class HuggingFaceAIService:
         additional_context: Optional[Dict] = None
     ) -> Dict[str, any]:
         """
-        Analyze symptoms using hybrid approach: keyword analysis + AI confidence
+        Analyze symptoms using OpenAI models from Hugging Face
         
         Args:
             symptoms: Patient symptoms description
@@ -79,76 +77,157 @@ class HuggingFaceAIService:
             - ai_insights: AI-generated insights
         """
         
-        # First do keyword analysis for accurate severity
+        # First do keyword analysis for critical emergency detection
         keyword_result = self._fallback_analysis(symptoms, age, pregnancy_status)
         
-        # If we have high confidence from keywords, use that
-        if keyword_result['confidence'] >= 0.9:
-            return keyword_result
-        
-        # Otherwise, try to enhance with AI model
-        if not self.model or not self.tokenizer:
-            logger.warning("Hugging Face model not available, using keyword analysis")
-            return keyword_result
-        
+        # Always use OpenAI model for enhanced analysis
         try:
-            # Prepare input for the model
-            medical_prompt = self._create_medical_prompt(symptoms, age, pregnancy_status, additional_context)
-            
-            # Tokenize input
-            inputs = self.tokenizer(
-                medical_prompt,
-                return_tensors='pt',
-                max_length=512,
-                truncation=True,
-                padding='max_length'
-            )
-            
-            # Get model prediction
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-            
-            # Process the output
-            predictions = torch.softmax(outputs.logits, dim=-1)
-            predicted_class_idx = torch.argmax(predictions, dim=-1).item()
-            
-            # Map prediction to severity
-            severity_labels = ['GREEN', 'YELLOW', 'RED']
-            predicted_severity = severity_labels[predicted_class_idx]
-            ai_confidence = float(predictions[0][predicted_class_idx])
-            
-            # Use keyword severity but AI confidence
-            final_severity = keyword_result['severity']
-            final_confidence = min(keyword_result['confidence'] + (ai_confidence * 0.3), 0.95)
-            
-            # Generate detailed reasoning
-            reasoning = self._generate_reasoning(
-                symptoms, age, pregnancy_status, final_severity, final_confidence
-            )
-            
-            # Get recommendations
-            recommendations = self._get_medical_recommendations(final_severity)
-            
-            # Generate AI insights
-            ai_insights = self._generate_ai_insights(
-                symptoms, age, pregnancy_status, final_severity, final_confidence
-            )
-            
-            logger.info(f"Hybrid Analysis completed: {final_severity} severity with {final_confidence:.2f} confidence")
-            
-            return {
-                'severity': final_severity,
-                'reason': reasoning,
-                'confidence': final_confidence,
-                'recommendations': recommendations,
-                'ai_insights': ai_insights,
-                'model_used': self.model_name,
-                'analysis_method': 'hybrid_keyword_ai'
-            }
-            
+            return self._analyze_with_openai_model(symptoms, age, pregnancy_status, additional_context, keyword_result)
         except Exception as e:
-            logger.error(f"Error in AI analysis, using keyword fallback: {e}")
+            logger.error(f"OpenAI model analysis failed, using keyword fallback: {e}")
             return keyword_result
+    
+    def _analyze_with_openai_model(
+        self, 
+        symptoms: str, 
+        age: int, 
+        pregnancy_status: bool, 
+        additional_context: Optional[Dict],
+        keyword_result: Dict[str, any]
+    ) -> Dict[str, any]:
+        """
+        Analyze symptoms using OpenAI models from Hugging Face
+        
+        Args:
+            symptoms: Patient symptoms description
+            age: Patient age
+            pregnancy_status: Whether patient is pregnant
+            additional_context: Additional patient data
+            keyword_result: Result from keyword analysis
+            
+        Returns:
+            Enhanced analysis result
+        """
+        
+        # Create medical prompt for OpenAI model
+        medical_prompt = self._create_medical_prompt(symptoms, age, pregnancy_status, additional_context)
+        
+        # Try multiple models in order of preference
+        models_to_try = [
+            "distilgpt2",  # Fast and reliable
+            "gpt2",        # Classic GPT-2
+            "gpt2-medium", # Medium size
+            "microsoft/DialoGPT-small"  # Smaller DialoGPT
+        ]
+        
+        for model_name in models_to_try:
+            try:
+                logger.info(f"Trying model: {model_name}")
+                
+                # Call Hugging Face API with OpenAI model
+                headers = {"Authorization": f"Bearer {self.api_token}"}
+                
+                # Use Hugging Face Inference API with OpenAI model
+                API_URL = f"https://api-inference.huggingface.co/models/{model_name}"
+                
+                payload = {
+                    "inputs": f"Medical triage analysis: {medical_prompt}\n\nProvide severity assessment (RED/YELLOW/GREEN) and detailed reasoning:",
+                    "parameters": {
+                        "max_length": 200,  # Reduced for faster response
+                        "temperature": 0.3,
+                        "return_full_text": False,
+                        "wait_for_model": True  # Don't wait for model loading
+                    }
+                }
+                
+                # Add timeout for faster failure
+                response = requests.post(API_URL, headers=headers, json=payload, timeout=10)
+                response.raise_for_status()
+                
+                result = response.json()
+                
+                # Check for model loading error
+                if isinstance(result, dict) and 'error' in result:
+                    if 'loading' in result['error'].lower():
+                        logger.warning(f"Model {model_name} is loading, trying next model")
+                        continue
+                    else:
+                        logger.error(f"Model {model_name} error: {result['error']}")
+                        continue
+                
+                # Extract AI response
+                if isinstance(result, list) and len(result) > 0:
+                    ai_response = result[0].get('generated_text', '').strip()
+                else:
+                    ai_response = str(result).strip()
+                
+                if not ai_response:
+                    logger.warning(f"Empty response from {model_name}, trying next model")
+                    continue
+                
+                # Parse AI response for severity and confidence
+                severity = self._extract_severity_from_response(ai_response, keyword_result['severity'])
+                confidence = self._extract_confidence_from_response(ai_response, keyword_result['confidence'])
+                
+                # Generate reasoning
+                reasoning = f"OpenAI model analysis: {ai_response[:300]}..." if len(ai_response) > 300 else f"OpenAI model analysis: {ai_response}"
+                
+                # Get recommendations
+                recommendations = self._get_medical_recommendations(severity)
+                
+                # Generate AI insights
+                ai_insights = [
+                    "Analysis enhanced by OpenAI model from Hugging Face",
+                    f"Model used: {model_name}",
+                    "Advanced conversational AI reasoning",
+                    "Real-time AI processing"
+                ]
+                
+                logger.info(f"OpenAI Model Analysis completed with {model_name}: {severity} severity with {confidence:.2f} confidence")
+                
+                return {
+                    'severity': severity,
+                    'reason': reasoning,
+                    'confidence': confidence,
+                    'recommendations': recommendations,
+                    'ai_insights': ai_insights,
+                    'model_used': model_name,
+                    'analysis_method': 'openai_huggingface'
+                }
+                
+            except requests.exceptions.RequestException as e:
+                logger.error(f"Request error with {model_name}: {e}")
+                continue
+            except Exception as e:
+                logger.error(f"Error with {model_name}: {e}")
+                continue
+        
+        # All models failed, return keyword fallback
+        logger.warning("All OpenAI models failed, using keyword analysis")
+        return keyword_result
+    
+    def _extract_severity_from_response(self, response: str, fallback_severity: str) -> str:
+        """Extract severity level from AI response"""
+        response_upper = response.upper()
+        
+        if 'RED' in response_upper or 'CRITICAL' in response_upper or 'EMERGENCY' in response_upper:
+            return 'RED'
+        elif 'YELLOW' in response_upper or 'URGENT' in response_upper or 'PRIORITY' in response_upper:
+            return 'YELLOW'
+        elif 'GREEN' in response_upper or 'ROUTINE' in response_upper or 'LOW' in response_upper:
+            return 'GREEN'
+        
+        return fallback_severity
+    
+    def _extract_confidence_from_response(self, response: str, fallback_confidence: float) -> float:
+        """Extract confidence from AI response"""
+        # Look for confidence indicators
+        if 'high confidence' in response.lower() or 'certain' in response.lower():
+            return min(fallback_confidence + 0.2, 0.95)
+        elif 'low confidence' in response.lower() or 'uncertain' in response.lower():
+            return max(fallback_confidence - 0.1, 0.5)
+        
+        return min(fallback_confidence + 0.1, 0.9)
     
     def _create_medical_prompt(
         self, 
@@ -461,9 +540,18 @@ class HuggingFaceAIService:
 class AIServiceManager:
     """Manager for AI services"""
     
-    def __init__(self):
+    def __init__(self, api_token: str = None):
         """Initialize AI services"""
-        self.huggingface_service = HuggingFaceAIService()
+        from config import HUGGINGFACE_API_TOKEN
+        
+        # Use provided token or get from config
+        token = api_token or HUGGINGFACE_API_TOKEN
+        
+        # Initialize Hugging Face service with API support (API-only mode)
+        self.huggingface_service = HuggingFaceAIService(
+            use_api=True,
+            api_token=token
+        )
         self.fallback_service = FallbackAnalysisService()
         
     def get_ai_analysis(
@@ -492,15 +580,15 @@ class AIServiceManager:
             )
     
     def get_available_models(self) -> List[str]:
-        """Get list of available Hugging Face models"""
+        """Get list of available OpenAI models from Hugging Face"""
         models = [
-            "medical-bert-base-uncased",
-            "medical-bert-large-uncased",
-            "medical-distilbert-base-uncased",
-            "medical-distilbert-large-uncased",
-            "medical-emotion-base-uncased",
-            "medical-biobert-base-uncased",
-            "medical-biobert-large-uncased"
+            # Working OpenAI models for medical triage
+            "distilgpt2",  # Fast and reliable
+            "gpt2",        # Classic GPT-2
+            "gpt2-medium", # Medium size
+            "gpt2-large",  # Large model
+            "microsoft/DialoGPT-small",  # Smaller DialoGPT
+            "microsoft/DialoGPT-large"   # Larger DialoGPT
         ]
         return models
 

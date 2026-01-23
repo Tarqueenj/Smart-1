@@ -599,7 +599,7 @@ document.getElementById('triage-form').addEventListener('submit', async function
         const result = await response.json();
         
         if (result.success) {
-            showResults(result, formData);
+            showResults(result.data, formData);
         } else {
             throw new Error('Triage analysis failed');
         }
@@ -670,9 +670,34 @@ function showResults(result, formData) {
     // Set analysis method
     const analysisMethod = document.getElementById('analysis-method');
     if (result.analysis_method) {
-        const methodText = result.analysis_method === 'huggingface' ? 'Advanced AI Analysis' : 'Standard Analysis';
-        const methodIcon = result.analysis_method === 'huggingface' ? 'fa-brain' : 'fa-search';
-        const methodColor = result.analysis_method === 'huggingface' ? 'text-green-600' : 'text-gray-600';
+        let methodText, methodIcon, methodColor;
+        
+        switch(result.analysis_method) {
+            case 'openai_huggingface':
+                methodText = 'OpenAI Model Analysis';
+                methodIcon = 'fa-robot';
+                methodColor = 'text-purple-600';
+                break;
+            case 'huggingface_api':
+                methodText = 'Hugging Face AI Analysis';
+                methodIcon = 'fa-brain';
+                methodColor = 'text-blue-600';
+                break;
+            case 'hybrid_keyword_ai':
+                methodText = 'Hybrid AI Analysis';
+                methodIcon = 'fa-microchip';
+                methodColor = 'text-green-600';
+                break;
+            case 'keyword_fallback':
+                methodText = 'Keyword Analysis';
+                methodIcon = 'fa-search';
+                methodColor = 'text-gray-600';
+                break;
+            default:
+                methodText = 'Standard Analysis';
+                methodIcon = 'fa-search';
+                methodColor = 'text-gray-600';
+        }
         
         analysisMethod.innerHTML = `
             <div class="flex items-center space-x-2">

@@ -1,5 +1,6 @@
 from datetime import datetime
 import uuid
+from bson.objectid import ObjectId
 
 class PatientModel:
     def __init__(self, mongo):
@@ -18,6 +19,20 @@ class PatientModel:
         for patient in patients:
             patient['_id'] = str(patient['_id'])
         return patients
+    
+    def get_by_id(self, patient_id):
+        """Get patient by ID"""
+        try:
+            patient = self.collection.find_one({'_id': ObjectId(patient_id)})
+            if patient:
+                patient['_id'] = str(patient['_id'])
+            return patient
+        except:
+            # Try by patient_id field
+            patient = self.collection.find_one({'patient_id': patient_id})
+            if patient:
+                patient['_id'] = str(patient['_id'])
+            return patient
     
     def update_status(self, patient_id, new_status):
         result = self.collection.update_one(
@@ -83,6 +98,26 @@ class UserModel:
     def __init__(self, mongo):
         self.collection = mongo.db.users
     
+    def create(self, user_data):
+        """Create a new user"""
+        user_data['created_at'] = datetime.now()
+        result = self.collection.insert_one(user_data)
+        return result
+    
+    def get_by_username(self, username):
+        """Get user by username"""
+        user = self.collection.find_one({'username': username})
+        if user:
+            user['_id'] = str(user['_id'])
+        return user
+    
+    def get_by_id(self, user_id):
+        """Get user by ID"""
+        user = self.collection.find_one({'_id': ObjectId(user_id)})
+        if user:
+            user['_id'] = str(user['_id'])
+        return user
+    
     def authenticate(self, username, password):
         user = self.collection.find_one({'user_id': username})
         if user and user.get('password') == password:
@@ -126,6 +161,11 @@ class AnalyticsModel:
             'total_events': result[0]['total_events'] if result else 0,
             'date_filter': date_filter.isoformat() if date_filter else None
         }
+    
+    def log_user_activity(self, activity_data):
+        """Log user activity for auditing"""
+        activity_data['logged_at'] = datetime.now()
+        self.collection.insert_one(activity_data)
 
 def init_models(mongo):
     return {

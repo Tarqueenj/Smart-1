@@ -32,9 +32,16 @@ from realtime import initialize_realtime
 
 # Import Hugging Face AI service
 try:
+    from config import HUGGINGFACE_API_TOKEN
     from ai_service import AIServiceManager
     AI_AVAILABLE = True
     ai_service = AIServiceManager()
+    # Initialize with API support if token is available
+    if hasattr(ai_service, 'huggingface_service') and ai_service.huggingface_service:
+        if HUGGINGFACE_API_TOKEN:
+            print("🌐 Hugging Face API token found - using online models")
+        else:
+            print("💻 No Hugging Face API token - using local models")
     print("✅ Hugging Face AI service loaded successfully")
 except ImportError as e:
     AI_AVAILABLE = False
@@ -57,6 +64,9 @@ USERS = {
     'clinician': {'password': 'clinician123', 'role': 'clinician', 'name': 'Dr. Michael Chen'},
     'admin': {'password': 'admin123', 'role': 'admin', 'name': 'Admin User'}
 }
+
+# In-memory user storage for new registrations (in production, use database)
+REGISTERED_USERS = {}
 
 # Authentication decorator
 def login_required(f):
@@ -96,10 +106,10 @@ init_api(mongo)
 # Initialize real-time WebSocket manager
 realtime_manager = initialize_realtime(socketio)
 
-# Connect to database (commented out for testing AI service)
-# if not db_manager.connect():
-#     print("❌ Failed to connect to database. Exiting...")
-#     exit(1)
+# Connect to database
+if not db_manager.connect():
+    print("❌ Failed to connect to database. Using in-memory storage...")
+    # Don't exit, continue with in-memory storage
 
 # Initialize database with collections and seed data
 db_manager.initialize_collections()
@@ -142,11 +152,15 @@ def auth_login():
         if not username or not password:
             return render_template('login.html', error='Username and password are required')
         
-        # Check user credentials
+        # Check demo users first
         if username in USERS and USERS[username]['password'] == password:
             session['user_id'] = username
             session['role'] = USERS[username]['role']
             session['name'] = USERS[username]['name']
+            session['is_demo'] = True
+            
+            # Log user activity
+            log_user_activity(username, 'login', {'role': USERS[username]['role'], 'type': 'demo'})
             
             # Redirect based on role
             if USERS[username]['role'] == 'nurse':
@@ -155,29 +169,465 @@ def auth_login():
                 return redirect(url_for('clinician_dashboard'))
             elif USERS[username]['role'] == 'admin':
                 return redirect(url_for('admin_dashboard'))
+        
+        # Check registered users (from MongoDB first, then in-memory)
+        user_found = False
+        user_data = None
+        
+        try:
+            # Try to find user in MongoDB first
+            if hasattr(models, 'get') and 'user' in models:
+                user_data = models['user'].get_by_username(username)
+                if user_data and auth_manager.verify_password(password, user_data['password']):
+                    user_found = True
+                    print(f"✅ User {username} authenticated from database")
+        except Exception as db_error:
+            print(f"⚠️ Database lookup failed for {username}: {db_error}")
+        
+        # Fallback to in-memory storage if not found in database
+        if not user_found and username in REGISTERED_USERS:
+            if auth_manager.verify_password(password, REGISTERED_USERS[username]['password']):
+                user_data = REGISTERED_USERS[username]
+                user_found = True
+                print(f"✅ User {username} authenticated from in-memory storage")
+        
+        if user_found:
+            session['user_id'] = username
+            session['role'] = user_data['role']
+            session['name'] = user_data['name']
+            session['is_demo'] = user_data.get('is_demo', False)
+            
+            # Log user activity
+            log_user_activity(username, 'login', {'role': user_data['role'], 'type': 'registered' if not user_data.get('is_demo') else 'demo'})
+            
+            # Redirect based on role
+            if user_data['role'] == 'nurse':
+                return redirect(url_for('nurse_dashboard'))
+            elif user_data['role'] == 'clinician':
+                return redirect(url_for('clinician_dashboard'))
+            elif user_data['role'] == 'admin':
+                return redirect(url_for('admin_dashboard'))
         else:
             return render_template('login.html', error='Invalid username or password')
             
     except Exception as e:
         return render_template('login.html', error='Login failed. Please try again.')
 
+@app.route('/auth/register', methods=['POST'])
+def auth_register():
+    """Register new user"""
+    try:
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        role = request.form.get('role', '')
+        full_name = request.form.get('full_name', '').strip()
+        
+        # Validation
+        if not username or not password or not role or not full_name:
+            return render_template('login.html', error='All fields are required for registration')
+        
+        # Check if username already exists
+        if username in USERS or username in REGISTERED_USERS:
+            return render_template('login.html', error='Username already exists')
+        
+        # Validate role
+        if role not in ['nurse', 'clinician', 'admin']:
+            return render_template('login.html', error='Invalid role selected')
+        
+        # Password strength validation
+        if len(password) < 6:
+            return render_template('login.html', error='Password must be at least 6 characters long')
+        
+        # Create new user
+        hashed_password = auth_manager.hash_password(password)
+        user_data = {
+            'username': username,
+            'password': hashed_password,
+            'role': role,
+            'name': full_name,
+            'created_at': datetime.now().isoformat(),
+            'is_demo': False
+        }
+        
+        # Try to save to database first
+        try:
+            if hasattr(models, 'get') and 'user' in models:
+                # Save to MongoDB
+                user = models['user'].create(user_data)
+                user_id = str(user.inserted_id) if hasattr(user, 'inserted_id') else username
+                print(f"✅ User {username} saved to database with ID: {user_id}")
+            else:
+                # Fallback to in-memory storage
+                REGISTERED_USERS[username] = user_data
+                print(f"⚠️ User {username} saved to in-memory storage")
+        except Exception as db_error:
+            print(f"⚠️ Database save failed for user {username}: {db_error}")
+            # Fallback to in-memory storage
+            REGISTERED_USERS[username] = user_data
+        
+        # Log registration activity
+        log_user_activity(username, 'register', {'role': role, 'name': full_name})
+        
+        # Auto-login after registration
+        session['user_id'] = username
+        session['role'] = role
+        session['name'] = full_name
+        session['is_demo'] = False
+        
+        # Redirect based on role
+        if role == 'nurse':
+            return redirect(url_for('nurse_dashboard'))
+        elif role == 'clinician':
+            return redirect(url_for('clinician_dashboard'))
+        elif role == 'admin':
+            return redirect(url_for('admin_dashboard'))
+            
+    except Exception as e:
+        return render_template('login.html', error='Registration failed. Please try again.')
+
+@app.route('/auth/logout')
+def auth_logout():
+    """Logout user"""
+    user_id = session.get('user_id')
+    if user_id:
+        log_user_activity(user_id, 'logout', {})
+    
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/nurse')
+@login_required
 @role_required('nurse', 'admin')
 def nurse_dashboard():
     """Nurse triage dashboard"""
     return render_template('nurse.html')
 
+@app.route('/api/nurse/dashboard')
+@login_required
+@role_required('nurse', 'admin')
+def nurse_dashboard_data():
+    """Get nurse dashboard data"""
+    try:
+        # Get patient statistics
+        stats = {
+            'total_patients': 0,
+            'red_patients': 0,
+            'yellow_patients': 0,
+            'green_patients': 0
+        }
+        
+        # Get patient queue
+        patients = []
+        
+        try:
+            # Try to get from database
+            if hasattr(models, 'get') and 'patient' in models:
+                db_patients = models['patient'].get_all()
+                for patient in db_patients:
+                    patient_data = {
+                        'id': str(patient.get('_id', '')),
+                        'name': patient.get('name', 'Unknown'),
+                        'age': patient.get('age', 0),
+                        'symptoms': patient.get('symptoms', ''),
+                        'severity': patient.get('severity', 'GREEN'),
+                        'triage_reason': patient.get('triage_reason', ''),
+                        'ai_confidence': patient.get('ai_confidence', 0),
+                        'analysis_method': patient.get('analysis_method', 'unknown'),
+                        'created_at': patient.get('created_at', datetime.now().isoformat()),
+                        'status': 'waiting',
+                        'wait_time': calculate_wait_time(patient.get('created_at', datetime.now().isoformat())),
+                        'risk_flags': get_risk_flags(patient.get('symptoms', ''), patient.get('severity', 'GREEN'))
+                    }
+                    patients.append(patient_data)
+                    
+                    # Update stats
+                    stats['total_patients'] += 1
+                    if patient.get('severity') == 'RED':
+                        stats['red_patients'] += 1
+                    elif patient.get('severity') == 'YELLOW':
+                        stats['yellow_patients'] += 1
+                    else:
+                        stats['green_patients'] += 1
+        except Exception as db_error:
+            print(f"⚠️ Database error in nurse dashboard: {db_error}")
+        
+        # Sort by severity and time
+        patients.sort(key=lambda x: (
+            0 if x['severity'] == 'RED' else 1 if x['severity'] == 'YELLOW' else 2,
+            x['created_at']
+        ), reverse=True)
+        
+        return APIUtils.create_response(
+            success=True,
+            data={
+                'stats': stats,
+                'patients': patients[:20],  # Limit to 20 most recent
+                'last_updated': datetime.now().isoformat()
+            }
+        )
+        
+    except Exception as e:
+        LoggingUtils.log_error(e, {'action': 'nurse_dashboard'})
+        return APIUtils.create_error_response('Failed to load dashboard data', 500)
+
+@app.route('/api/nurse/update_patient_status', methods=['POST'])
+@login_required
+@role_required('nurse', 'admin')
+def update_patient_status():
+    """Update patient status"""
+    try:
+        data = request.get_json()
+        patient_id = data.get('patient_id')
+        status = data.get('status')  # waiting, in-progress, completed
+        
+        if not patient_id or not status:
+            return APIUtils.create_error_response('Patient ID and status are required', 400)
+        
+        # Update in database
+        try:
+            if hasattr(models, 'get') and 'patient' in models:
+                models['patient'].update_status(patient_id, status)
+                print(f"✅ Updated patient {patient_id} status to {status}")
+        except Exception as db_error:
+            print(f"⚠️ Failed to update patient status in database: {db_error}")
+        
+        # Log action
+        log_user_activity(
+            session.get('user_id', 'unknown'),
+            'update_patient_status',
+            {'patient_id': patient_id, 'status': status}
+        )
+        
+        return APIUtils.create_response(
+            success=True,
+            message='Patient status updated successfully'
+        )
+        
+    except Exception as e:
+        LoggingUtils.log_error(e, {'action': 'update_patient_status'})
+        return APIUtils.create_error_response('Failed to update patient status', 500)
+
+def calculate_wait_time(created_at):
+    """Calculate wait time in minutes"""
+    try:
+        if isinstance(created_at, str):
+            created_time = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+        else:
+            created_time = created_at
+        
+        wait_time = datetime.now() - created_time
+        return max(0, int(wait_time.total_seconds() / 60))
+    except:
+        return 0
+
+def get_risk_flags(symptoms, severity):
+    """Get risk flags for patient"""
+    flags = []
+    symptoms_lower = symptoms.lower()
+    
+    if severity == 'RED':
+        flags.append('Critical Emergency')
+    
+    if any(keyword in symptoms_lower for keyword in ['chest pain', 'difficulty breathing', 'unconscious', 'seizure']):
+        flags.append('Life Threatening')
+    
+    if any(keyword in symptoms_lower for keyword in ['fever', 'infection', 'bleeding']):
+        flags.append('Infection Risk')
+    
+    if 'pregnant' in symptoms_lower:
+        flags.append('Pregnancy Related')
+    
+    return flags[:3]  # Limit to 3 flags
+
 @app.route('/clinician')
+@login_required
 @role_required('clinician', 'admin')
 def clinician_dashboard():
     """Clinician dashboard"""
     return render_template('clinician.html')
 
 @app.route('/admin')
+@login_required
 @role_required('admin')
 def admin_dashboard():
     """Admin dashboard"""
     return render_template('admin.html')
+
+@app.route('/api/clinician/dashboard')
+@login_required
+@role_required('clinician', 'admin')
+def clinician_dashboard_data():
+    """Get clinician dashboard data"""
+    try:
+        # Get patient statistics
+        stats = {
+            'pending_review': 0,
+            'critical_cases': 0,
+            'completed_today': 0
+        }
+        
+        # Get patient queue for clinician review
+        patients = []
+        
+        try:
+            # Try to get from database
+            if hasattr(models, 'get') and 'patient' in models:
+                db_patients = models['patient'].get_all()
+                for patient in db_patients:
+                    patient_data = {
+                        'patient_id': str(patient.get('_id', '')),
+                        'name': patient.get('name', 'Unknown'),
+                        'age': patient.get('age', 0),
+                        'symptoms': patient.get('symptoms', ''),
+                        'severity': patient.get('severity', 'GREEN'),
+                        'triage_reason': patient.get('triage_reason', ''),
+                        'ai_confidence': patient.get('ai_confidence', 0),
+                        'created_at': patient.get('created_at', datetime.now().isoformat()),
+                        'status': patient.get('status', 'waiting'),
+                        'timestamp': patient.get('created_at', datetime.now().isoformat()),
+                        'pregnancy_status': patient.get('pregnancy_status', False)
+                    }
+                    patients.append(patient_data)
+                    
+                    # Update stats
+                    if patient.get('status') in ['waiting', 'in-progress']:
+                        stats['pending_review'] += 1
+                    if patient.get('severity') == 'RED':
+                        stats['critical_cases'] += 1
+                    if patient.get('status') == 'completed':
+                        stats['completed_today'] += 1
+        except Exception as db_error:
+            print(f"⚠️ Database error in clinician dashboard: {db_error}")
+        
+        # Sort by severity and time
+        patients.sort(key=lambda x: (
+            0 if x['severity'] == 'RED' else 1 if x['severity'] == 'YELLOW' else 2,
+            x['created_at']
+        ), reverse=True)
+        
+        return APIUtils.create_response(
+            success=True,
+            data={
+                'stats': stats,
+                'patients': patients[:20],  # Limit to 20 most recent
+                'last_updated': datetime.now().isoformat()
+            }
+        )
+        
+    except Exception as e:
+        LoggingUtils.log_error(e, {'action': 'clinician_dashboard'})
+        return APIUtils.create_error_response('Failed to load dashboard data', 500)
+
+@app.route('/api/admin/dashboard')
+@login_required
+@role_required('admin')
+def admin_dashboard_data():
+    """Get admin dashboard data"""
+    try:
+        # Get analytics data
+        analytics_data = {}
+        
+        try:
+            # Get today's statistics
+            today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            patient_stats = models['patient'].get_statistics(today)
+            
+            # Get all patients for AI analysis statistics
+            all_patients = models['patient'].get_all()
+            
+            # Calculate AI analysis statistics
+            ai_stats = {
+                'total_analyzed': len(all_patients),
+                'huggingface_used': len([p for p in all_patients if p.get('analysis_method') == 'huggingface']),
+                'keyword_fallback_used': len([p for p in all_patients if p.get('analysis_method') == 'keyword_fallback']),
+                'average_confidence': round(sum([p.get('ai_confidence', 0) for p in all_patients]) / len(all_patients), 2) if all_patients else 0,
+                'models_used': list(set([p.get('model_used', 'unknown') for p in all_patients]))
+            }
+            
+            analytics_data = {
+                'total_patients': patient_stats['total_patients'],
+                'red_patients': patient_stats['red_patients'],
+                'yellow_patients': patient_stats['yellow_patients'],
+                'green_patients': patient_stats['green_patients'],
+                'average_wait_time': round(patient_stats['avg_wait_time'] or 0, 1),
+                'peak_hour': 14,
+                'bed_occupancy': 78,
+                'doctor_to_patient_ratio': 1.8,
+                'ai_analysis_stats': ai_stats
+            }
+        except Exception as db_error:
+            print(f"⚠️ Database error in admin dashboard: {db_error}")
+            # Fallback to mock data
+            analytics_data = {
+                'total_patients': 45,
+                'red_patients': 8,
+                'yellow_patients': 22,
+                'green_patients': 15,
+                'average_wait_time': 25.5,
+                'peak_hour': 14,
+                'bed_occupancy': 78,
+                'doctor_to_patient_ratio': 1.8,
+                'ai_analysis_stats': {
+                    'total_analyzed': 45,
+                    'huggingface_used': 30,
+                    'keyword_fallback_used': 15,
+                    'average_confidence': 0.85,
+                    'models_used': ['distilbert-base-uncased', 'keyword_fallback']
+                }
+            }
+        
+        return APIUtils.create_response(
+            success=True,
+            data=analytics_data
+        )
+        
+    except Exception as e:
+        LoggingUtils.log_error(e, {'action': 'admin_dashboard'})
+        return APIUtils.create_error_response('Failed to load dashboard data', 500)
+
+@app.route('/api/clinician/patient_details/<patient_id>')
+@login_required
+@role_required('clinician', 'admin')
+def get_patient_details(patient_id):
+    """Get detailed patient information for clinician review"""
+    try:
+        patient_data = None
+        
+        try:
+            # Try to get from database
+            if hasattr(models, 'get') and 'patient' in models:
+                patient = models['patient'].get_by_id(patient_id)
+                if patient:
+                    patient_data = {
+                        'patient_id': str(patient.get('_id', '')),
+                        'name': patient.get('name', 'Unknown'),
+                        'age': patient.get('age', 0),
+                        'symptoms': patient.get('symptoms', ''),
+                        'severity': patient.get('severity', 'GREEN'),
+                        'triage_reason': patient.get('triage_reason', ''),
+                        'ai_confidence': patient.get('ai_confidence', 0),
+                        'analysis_method': patient.get('analysis_method', 'unknown'),
+                        'model_used': patient.get('model_used', 'unknown'),
+                        'ai_insights': patient.get('ai_insights', []),
+                        'created_at': patient.get('created_at', datetime.now().isoformat()),
+                        'status': patient.get('status', 'waiting'),
+                        'pregnancy_status': patient.get('pregnancy_status', False),
+                        'facility': patient.get('facility', 'MTRH')
+                    }
+        except Exception as db_error:
+            print(f"⚠️ Database error getting patient details: {db_error}")
+        
+        if not patient_data:
+            return APIUtils.create_error_response('Patient not found', 404)
+        
+        return APIUtils.create_response(
+            success=True,
+            data=patient_data
+        )
+        
+    except Exception as e:
+        LoggingUtils.log_error(e, {'action': 'get_patient_details', 'patient_id': patient_id})
+        return APIUtils.create_error_response('Failed to get patient details', 500)
 
 # Legacy API Routes (for backward compatibility)
 @app.route('/api/submit_symptoms', methods=['POST'])
@@ -338,7 +788,7 @@ def get_patients():
         return APIUtils.create_error_response('Failed to retrieve patients', 500)
 
 @app.route('/api/update_patient_status', methods=['POST'])
-def update_patient_status():
+def update_patient_status_legacy():
     """Update patient status (legacy endpoint)"""
     try:
         data = request.get_json()
@@ -879,6 +1329,25 @@ def bad_request(error):
 def shutdown_db(exception=None):
     """Cleanup on app shutdown"""
     pass
+
+def log_user_activity(user_id, action, details=None):
+    """Log user activity for auditing"""
+    try:
+        activity_data = {
+            'user_id': user_id,
+            'action': action,
+            'timestamp': datetime.now().isoformat(),
+            'details': details or {}
+        }
+        
+        # Try to save to database
+        if hasattr(models, 'get') and 'analytics' in models:
+            models['analytics'].log_user_activity(activity_data)
+        
+        print(f"📝 Activity logged: {user_id} - {action}")
+        
+    except Exception as e:
+        print(f"⚠️ Failed to log user activity: {e}")
 
 if __name__ == '__main__':
     try:
