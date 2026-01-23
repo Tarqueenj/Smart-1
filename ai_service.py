@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class HuggingFaceAIService:
     """Hugging Face AI service for medical triage analysis"""
     
-    def __init__(self, model_name: str = "medical-bert-base-uncased"):
+    def __init__(self, model_name: str = "bert-base-uncased"):
         """
         Initialize the Hugging Face AI service
         
@@ -62,7 +62,7 @@ class HuggingFaceAIService:
         additional_context: Optional[Dict] = None
     ) -> Dict[str, any]:
         """
-        Analyze symptoms using Hugging Face AI model
+        Analyze symptoms using hybrid approach: keyword analysis + AI confidence
         
         Args:
             symptoms: Patient symptoms description
@@ -79,13 +79,20 @@ class HuggingFaceAIService:
             - ai_insights: AI-generated insights
         """
         
+        # First do keyword analysis for accurate severity
+        keyword_result = self._fallback_analysis(symptoms, age, pregnancy_status)
+        
+        # If we have high confidence from keywords, use that
+        if keyword_result['confidence'] >= 0.9:
+            return keyword_result
+        
+        # Otherwise, try to enhance with AI model
         if not self.model or not self.tokenizer:
-            logger.warning("Hugging Face model not available, using fallback analysis")
-            return self._fallback_analysis(symptoms, age, pregnancy_status)
+            logger.warning("Hugging Face model not available, using keyword analysis")
+            return keyword_result
         
         try:
             # Prepare input for the model
-            # Create a comprehensive medical prompt
             medical_prompt = self._create_medical_prompt(symptoms, age, pregnancy_status, additional_context)
             
             # Tokenize input
@@ -106,39 +113,42 @@ class HuggingFaceAIService:
             predicted_class_idx = torch.argmax(predictions, dim=-1).item()
             
             # Map prediction to severity
-            severity_map = {0: 'GREEN', 1: 'YELLOW', 2: 'RED'}
             severity_labels = ['GREEN', 'YELLOW', 'RED']
             predicted_severity = severity_labels[predicted_class_idx]
-            confidence = float(predictions[0][predicted_class_idx])
+            ai_confidence = float(predictions[0][predicted_class_idx])
+            
+            # Use keyword severity but AI confidence
+            final_severity = keyword_result['severity']
+            final_confidence = min(keyword_result['confidence'] + (ai_confidence * 0.3), 0.95)
             
             # Generate detailed reasoning
             reasoning = self._generate_reasoning(
-                symptoms, age, pregnancy_status, predicted_severity, confidence
+                symptoms, age, pregnancy_status, final_severity, final_confidence
             )
             
             # Get recommendations
-            recommendations = self._get_medical_recommendations(predicted_severity)
+            recommendations = self._get_medical_recommendations(final_severity)
             
             # Generate AI insights
             ai_insights = self._generate_ai_insights(
-                symptoms, age, pregnancy_status, predicted_severity, confidence
+                symptoms, age, pregnancy_status, final_severity, final_confidence
             )
             
-            logger.info(f"AI Analysis completed: {predicted_severity} severity with {confidence:.2f} confidence")
+            logger.info(f"Hybrid Analysis completed: {final_severity} severity with {final_confidence:.2f} confidence")
             
             return {
-                'severity': predicted_severity,
+                'severity': final_severity,
                 'reason': reasoning,
-                'confidence': confidence,
+                'confidence': final_confidence,
                 'recommendations': recommendations,
                 'ai_insights': ai_insights,
                 'model_used': self.model_name,
-                'analysis_method': 'huggingface'
+                'analysis_method': 'hybrid_keyword_ai'
             }
             
         except Exception as e:
-            logger.error(f"Error in Hugging Face AI analysis: {e}")
-            return self._fallback_analysis(symptoms, age, pregnancy_status)
+            logger.error(f"Error in AI analysis, using keyword fallback: {e}")
+            return keyword_result
     
     def _create_medical_prompt(
         self, 
