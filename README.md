@@ -2,6 +2,40 @@
 
 An AI-powered patient triage and prioritization platform designed to improve emergency and outpatient care in high-volume hospitals in Eldoret, Kenya.
 
+## 🚀 Quick Setup (Windows)
+
+1. **Clone and run setup script:**
+   ```bash
+   git clone https://github.com/Tarqueenj/Smart-1.git
+   cd Smart-1
+   setup.bat
+   ```
+
+2. **Or manual setup:**
+   ```bash
+   git clone https://github.com/Tarqueenj/Smart-1.git
+   cd Smart-1
+   python -m venv venv
+   venv\Scripts\activate
+   pip install -r requirements.txt
+   copy .env.example .env
+   python app.py
+   ```
+
+3. **Access the application:**
+   - Main: http://localhost:5000
+   - Login: http://localhost:5000/login
+   - Nurse: http://localhost:5000/nurse
+   - Clinician: http://localhost:5000/clinician
+   - Admin: http://localhost:5000/admin
+
+4. **Test credentials:**
+   - Nurse: `nurse` / `nurse123`
+   - Clinician: `clinician` / `clinician123`
+   - Admin: `admin` / `admin123`
+
+📖 **Detailed setup**: See `GITHUB_SETUP.txt` for complete instructions
+
 ## 🏥 Overview
 
 SmartTriage AI enables patients to report symptoms through a simple mobile or web interface using text or voice. Using OpenAI's natural language processing, the system analyzes patient-reported symptoms against established clinical triage protocols and assigns a real-time severity score (Red, Yellow, or Green).
